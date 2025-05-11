@@ -7,36 +7,13 @@
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
   </style>
+  <!-- Include Three.js from a CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-  <script type="module">
-    // Correct import paths
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/controls/OrbitControls.js';
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
-    import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.firebasestorage.app",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    getAnalytics(app);
-    const db = getDatabase(app);
-
-    const playerId = 'player_' + Math.floor(Math.random() * 10000);
-    const playerRef = ref(db, `players/${playerId}`);
-
-    set(playerRef, { x: 0, y: 1, z: 0 });
-    onDisconnect(playerRef).remove();
-
+  <script>
+    // No need to import Three.js as it's globally available
     let scene, camera, renderer, playerCube;
     const remotePlayers = {};
 
@@ -52,41 +29,12 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      const controls = new OrbitControls(camera, renderer.domElement);
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
       const geometry = new THREE.BoxGeometry();
       const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
       playerCube = new THREE.Mesh(geometry, material);
       scene.add(playerCube);
-
-      const playersRef = ref(db, 'players');
-
-      onChildAdded(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        if (id !== playerId) {
-          const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
-          mesh.position.set(data.x, data.y, data.z);
-          scene.add(mesh);
-          remotePlayers[id] = mesh;
-        }
-      });
-
-      onChildChanged(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        if (id !== playerId && remotePlayers[id]) {
-          remotePlayers[id].position.set(data.x, data.y, data.z);
-        }
-      });
-
-      onChildRemoved(playersRef, snapshot => {
-        const id = snapshot.key;
-        if (remotePlayers[id]) {
-          scene.remove(remotePlayers[id]);
-          delete remotePlayers[id];
-        }
-      });
 
       window.addEventListener('keydown', onKeyDown);
     }
@@ -97,12 +45,6 @@
       if (e.key === 'ArrowDown') playerCube.position.z += step;
       if (e.key === 'ArrowLeft') playerCube.position.x -= step;
       if (e.key === 'ArrowRight') playerCube.position.x += step;
-
-      set(playerRef, {
-        x: playerCube.position.x,
-        y: playerCube.position.y,
-        z: playerCube.position.z
-      });
     }
 
     function animate() {
@@ -112,3 +54,4 @@
   </script>
 </body>
 </html>
+
