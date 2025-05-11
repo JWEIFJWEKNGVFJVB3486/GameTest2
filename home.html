@@ -2,10 +2,11 @@
 <html>
 <head>
   <title>GameTest2 Home</title>
-  <!-- Firebase scripts -->
+  <!-- Firebase scripts placed at the top for initialization -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+  
   <style>
     body { margin: 0; font-family: Arial, sans-serif; background: #e3f2fd; }
     .navbar {
@@ -28,6 +29,7 @@
     <p>This is your account dashboard.</p>
   </div>
 
+  <!-- Firebase Initialization -->
   <script>
     // Firebase config
     const firebaseConfig = {
@@ -36,7 +38,7 @@
       projectId: "gametest2-ba5fe",
     };
 
-    // Init Firebase after loading the Firebase SDKs
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
@@ -58,6 +60,7 @@
       }
     });
 
+    // Logout function
     function logout() {
       auth.signOut().then(() => {
         window.location.href = "signup.html";
