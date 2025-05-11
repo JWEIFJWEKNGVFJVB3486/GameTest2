@@ -73,13 +73,13 @@
     });
 
     // Logout function
-    function logout() {
+    window.logout = function logout() {
       signOut(auth).then(() => {
         window.location.href = "signup.html";
       }).catch(error => {
         console.error("Error during logout: ", error);
       });
-    }
+    };
   </script>
 </body>
 </html>
