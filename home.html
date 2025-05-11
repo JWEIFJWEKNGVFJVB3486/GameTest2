@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GameTest2 Home</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #e3f2fd; }
+    .navbar {
+      background: #007bff; color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .logo { font-weight: bold; font-size: 1.5em; }
+    .user-info { font-size: 1em; }
+    .content { padding: 20px; }
+    button { background: white; border: none; padding: 8px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <div class="logo">GameTest2</div>
+    <div class="user-info" id="user-info">Loading...</div>
+  </div>
+  <div class="content">
+    <h2>Welcome to GameTest2!</h2>
+    <p>This is your account dashboard.</p>
+  </div>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+    };
+
+    // Init Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // Handle user session
+    auth.onAuthStateChanged(user => {
+      const userInfo = document.getElementById("user-info");
+      if (user) {
+        // Get more user data from Firestore
+        db.collection("users").doc(user.uid).get().then(doc => {
+          const data = doc.data();
+          userInfo.innerHTML = `👤 ${data.email} (${data.gender}) <button onclick="logout()">Logout</button>`;
+        });
+      } else {
+        window.location.href = "signup.html"; // Redirect if not logged in
+      }
+    });
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "signup.html";
+      });
+    }
+  </script>
+</body>
+</html>
