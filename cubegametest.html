@@ -28,7 +28,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Initialize OrbitControls after the script is loaded
+      // Initialize OrbitControls correctly
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
       const geometry = new THREE.BoxGeometry();
@@ -54,3 +54,4 @@
   </script>
 </body>
 </html>
+
