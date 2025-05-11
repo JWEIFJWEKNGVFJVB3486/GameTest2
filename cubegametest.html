@@ -10,9 +10,9 @@
 </head>
 <body>
   <script type="module">
-    // Use fully qualified URLs for Three.js and OrbitControls
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js'; // jsDelivr CDN
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/controls/OrbitControls.js'; // jsDelivr CDN
+    // Use the full CDN URLs for three.js and OrbitControls.js
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/controls/OrbitControls.js';
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-analytics.js";
     import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
@@ -52,7 +52,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      const controls = new OrbitControls(camera, renderer.domElement); // Add OrbitControls
+      const controls = new OrbitControls(camera, renderer.domElement);
 
       const geometry = new THREE.BoxGeometry();
       const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
