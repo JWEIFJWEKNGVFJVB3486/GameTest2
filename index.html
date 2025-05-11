@@ -67,6 +67,8 @@
         .then(() => {
           message.textContent = "Account created!";
           message.style.color = "green";
+          window.location.href = "home.html";
+
         })
         .catch((error) => {
           message.textContent = error.message;
