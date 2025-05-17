@@ -1,40 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Profile</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BrickBugs Profile Viewer</title>
   <style>
-    body { font-family: Arial; background: #f0f8ff; padding: 20px; text-align: center; }
+    body { font-family: Arial, sans-serif; background: #f0f8ff; margin: 0; padding: 20px; }
     .profile-box {
-      background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      display: inline-block; text-align: left;
+      background: white; padding: 20px; border-radius: 10px;
+      max-width: 400px; margin: auto; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      text-align: center;
     }
-    button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; }
-    .like-btn { background: #ff69b4; color: white; }
-    .dislike-btn { background: #8b0000; color: white; }
-    .back-btn { background: #007bff; color: white; }
+    .likes, .dislikes { font-size: 1.2em; margin: 10px; }
+    button {
+      padding: 10px 20px; border: none; border-radius: 5px;
+      margin: 5px; cursor: pointer;
+    }
+    .like-btn { background: #4caf50; color: white; }
+    .dislike-btn { background: #f44336; color: white; }
+    input[type="text"] {
+      padding: 8px; width: 80%; border: 1px solid #ccc;
+      border-radius: 5px; margin-top: 10px;
+    }
   </style>
 </head>
 <body>
-  <div class="profile-box">
-    <h2 id="username">Loading...</h2>
-    <p>Gender: <span id="gender">...</span></p>
-    <p>Ladybugs (Likes): <span id="likes">0</span></p>
-    <p>Stink Bugs (Dislikes): <span id="dislikes">0</span></p>
-    <p><strong>Termipoints:</strong> <span id="reputation">0</span></p>
 
-    <button class="like-btn" onclick="likeProfile()">🐞 Like</button>
-    <button class="dislike-btn" onclick="dislikeProfile()">🪳 Dislike</button>
-    <br>
-    <button class="back-btn" onclick="window.location.href='home.html'">Back to Dashboard</button>
+  <div class="profile-box">
+    <h2>View Profile</h2>
+    <input type="text" id="uidInput" placeholder="Enter user UID..." />
+    <button onclick="loadProfile()">Search</button>
+
+    <div id="profileData" style="margin-top: 20px;"></div>
   </div>
 
-  <!-- Firebase Modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -47,45 +50,81 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    // Change this to the target user's UID (you can pass it via query param or select from a list)
-    const viewedUserId = new URLSearchParams(window.location.search).get("uid");
+    let currentUserUid = null;
 
-    if (!viewedUserId) {
-      alert("No profile ID provided.");
-      window.location.href = "home.html";
-    }
-
-    let userRef = doc(db, "users", viewedUserId);
-
-    async function loadProfile() {
-      const snap = await getDoc(userRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        document.getElementById("username").textContent = data.username || "Unnamed User";
-        document.getElementById("gender").textContent = data.gender || "Unknown";
-        document.getElementById("likes").textContent = data.likes || 0;
-        document.getElementById("dislikes").textContent = data.dislikes || 0;
-        document.getElementById("reputation").textContent = (data.likes || 0) - (data.dislikes || 0);
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUserUid = user.uid;
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetUid = urlParams.get("uid");
+        if (targetUid) {
+          document.getElementById("uidInput").value = targetUid;
+          loadProfile(targetUid);
+        }
       } else {
-        alert("Profile not found.");
-        window.location.href = "home.html";
+        window.location.href = "index.html";
       }
-    }
+    });
 
-    async function likeProfile() {
-      await updateDoc(userRef, { likes: increment(1) });
-      loadProfile();
-    }
+    window.loadProfile = async function (providedUid = null) {
+      const uid = providedUid || document.getElementById("uidInput").value.trim();
+      if (!uid) return alert("Enter a UID");
 
-    async function dislikeProfile() {
-      await updateDoc(userRef, { dislikes: increment(1) });
-      loadProfile();
-    }
+      const ref = doc(db, "users", uid);
+      const snap = await getDoc(ref);
 
-    loadProfile();
+      if (!snap.exists()) {
+        document.getElementById("profileData").innerHTML = "User not found.";
+        return;
+      }
+
+      const data = snap.data();
+      const likes = data.likes || 0;
+      const dislikes = data.dislikes || 0;
+      const termipoints = likes - dislikes;
+
+      const userHasLiked = (data.likedBy || []).includes(currentUserUid);
+      const userHasDisliked = (data.dislikedBy || []).includes(currentUserUid);
+
+      document.getElementById("profileData").innerHTML = `
+        <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
+        <p>💰 Cube Bucks: ${data.cubeBucks || 0}</p>
+        <p>🐞 Ladybugs: ${likes} | 💩 Stink Bugs: ${dislikes}</p>
+        <p><strong>🔥 Termipoints:</strong> ${termipoints}</p>
+
+        <button class="like-btn" ${userHasLiked ? "disabled" : ""} onclick="likeUser('${uid}')">🐞 Like</button>
+        <button class="dislike-btn" ${userHasDisliked ? "disabled" : ""} onclick="dislikeUser('${uid}')">💩 Dislike</button>
+      `;
+    };
+
+    window.likeUser = async function (uid) {
+      const ref = doc(db, "users", uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      if ((data.likedBy || []).includes(currentUserUid)) return;
+
+      await updateDoc(ref, {
+        likes: (data.likes || 0) + 1,
+        likedBy: arrayUnion(currentUserUid)
+      });
+      loadProfile(uid);
+    };
+
+    window.dislikeUser = async function (uid) {
+      const ref = doc(db, "users", uid);
+      const snap = await getDoc(ref);
+      const data = snap.data();
+      if ((data.dislikedBy || []).includes(currentUserUid)) return;
+
+      await updateDoc(ref, {
+        dislikes: (data.dislikes || 0) + 1,
+        dislikedBy: arrayUnion(currentUserUid)
+      });
+      loadProfile(uid);
+    };
   </script>
 </body>
 </html>
