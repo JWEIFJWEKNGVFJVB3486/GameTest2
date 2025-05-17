@@ -6,11 +6,14 @@
     body {
       margin: 0;
       overflow: hidden;
-      font-family: Arial, sans-serif;
+      font-family: "Comic Sans MS", cursive, sans-serif;
     }
+
     canvas {
+      display: block;
       background: #eef;
     }
+
     #leaderboard {
       position: absolute;
       top: 10px;
@@ -20,12 +23,28 @@
       border-radius: 8px;
       box-shadow: 0 0 10px #ccc;
       font-size: 14px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #chatInput {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="game" width="800" height="600"></canvas>
-  <div id="leaderboard"><strong>Leaderboard</strong><br><ul id="board"></ul></div>
+  <canvas id="game"></canvas>
+  <div id="leaderboard"><strong>Players</strong><br><ul id="board"></ul></div>
+  <input id="chatInput" placeholder="Type your message..." maxlength="50" />
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -33,7 +52,6 @@
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    // Firebase config (your working project)
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
       authDomain: "gametest2-ba5fe.firebaseapp.com",
@@ -53,35 +71,57 @@
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const board = document.getElementById("board");
+    const chatInput = document.getElementById("chatInput");
+
+    // Fullscreen canvas
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
     let player = null;
     let playerRef = null;
     let players = {};
 
-    // Drawing players
+    // Draw all players
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (const uid in players) {
         const p = players[uid];
         ctx.fillStyle = p.color || "#000";
         ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+
+        // Username
         ctx.fillStyle = "black";
+        ctx.font = "14px Comic Sans MS";
         ctx.fillText(p.username || "?", p.x - 10, p.y - 15);
+
+        // Speech bubble
+        if (p.chat) {
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.font = "12px Comic Sans MS";
+          const textWidth = ctx.measureText(p.chat).width;
+          ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
+          ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
+          ctx.fillStyle = "black";
+          ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 22);
+        }
       }
     }
 
-    // Update leaderboard
     function updateLeaderboard() {
-      const sorted = Object.values(players).sort((a, b) => b.score - a.score);
       board.innerHTML = "";
-      for (const p of sorted) {
+      for (const uid in players) {
+        const p = players[uid];
         const li = document.createElement("li");
-        li.textContent = `${p.username || "?"}: ${p.score || 0}`;
+        li.textContent = p.username || "?";
         board.appendChild(li);
       }
     }
 
-    // Game loop
     function loop() {
       if (!player) return;
       let moved = false;
@@ -90,7 +130,6 @@
       if (keys["a"]) { player.x -= 2; moved = true; }
       if (keys["d"]) { player.x += 2; moved = true; }
       if (moved) {
-        player.score += 1;
         set(playerRef, player);
       }
       draw();
@@ -98,40 +137,53 @@
       requestAnimationFrame(loop);
     }
 
-    // Movement input
     const keys = {};
-    window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+    window.addEventListener("keydown", e => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === "Enter") {
+        if (chatInput.style.display === "none") {
+          chatInput.style.display = "block";
+          chatInput.focus();
+        } else {
+          const msg = chatInput.value.trim();
+          if (msg) {
+            player.chat = msg;
+            set(playerRef, player);
+            setTimeout(() => {
+              if (player && player.chat === msg) {
+                delete player.chat;
+                set(playerRef, player);
+              }
+            }, 4000); // Clear after 4s
+          }
+          chatInput.value = "";
+          chatInput.style.display = "none";
+        }
+      }
+    });
     window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    // Main auth and init
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       const uid = user.uid;
-
-      // Get username from Firestore
       const userDoc = await getDoc(doc(firestore, "users", uid));
       const username = userDoc.exists() ? userDoc.data().username || "Unnamed" : "Guest";
 
-      // Create local player object
       player = {
         username,
-        x: Math.random() * 700 + 50,
-        y: Math.random() * 500 + 50,
-        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
-        score: 0
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: Math.random() * (canvas.height - 100) + 50,
+        color: "#" + Math.floor(Math.random() * 16777215).toString(16)
       };
 
-      // Sync player data to Realtime DB
       playerRef = ref(realtimeDb, "players/" + uid);
       set(playerRef, player);
       onDisconnect(playerRef).remove();
 
-      // Listen for all player changes
       onValue(ref(realtimeDb, "players"), (snapshot) => {
         players = snapshot.val() || {};
       });
 
-      // Start game loop
       loop();
     });
   </script>
