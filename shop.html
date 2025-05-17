@@ -29,6 +29,7 @@
     .shop-item img {
       width: 100px;
       height: 100px;
+      border-radius: 10px;
     }
 
     .shop-item button {
@@ -41,7 +42,12 @@
       cursor: pointer;
     }
 
-    .shop-item button:hover {
+    .shop-item button:disabled {
+      background-color: #aaa;
+      cursor: default;
+    }
+
+    .shop-item button:hover:not(:disabled) {
       background-color: #81c784;
     }
 
@@ -88,26 +94,25 @@
     const db = getFirestore(app);
 
     const shopItems = [
-  {
-    name: "Classic Fedora",
-    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png",
-    cost: 25,
-    id: "fedora"
-  },
-  {
-    name: "Party Cone",
-    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png",
-    cost: 10,
-    id: "partycone"
-  },
-  {
-    name: "Wizard Hat",
-    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png",
-    cost: 40,
-    id: "wizard"
-  }
-];
-
+      {
+        id: "fedora",
+        name: "Classic Fedora",
+        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png",
+        cost: 25
+      },
+      {
+        id: "partycone",
+        name: "Party Cone",
+        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png",
+        cost: 10
+      },
+      {
+        id: "wizard",
+        name: "Wizard Hat",
+        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png",
+        cost: 40
+      }
+    ];
 
     let currentUserUid = null;
 
@@ -123,8 +128,9 @@
 
       const userRef = doc(db, "users", currentUserUid);
       const docSnap = await getDoc(userRef);
-      const userData = docSnap.data();
+      const userData = docSnap.exists() ? docSnap.data() : {};
       const ownedHats = userData.hats || [];
+      let cubeBucks = userData.cubeBucks || 0;
 
       shopItems.forEach(item => {
         const div = document.createElement("div");
@@ -142,17 +148,26 @@
         const btn = div.querySelector("button");
         if (!ownedHats.includes(item.id)) {
           btn.onclick = async () => {
-            const updatedSnap = await getDoc(userRef);
-            const updatedData = updatedSnap.data();
-            const bucks = updatedData.cubeBucks || 0;
+            // Re-get user data fresh to avoid race conditions
+            const freshSnap = await getDoc(userRef);
+            const freshData = freshSnap.exists() ? freshSnap.data() : {};
+            const freshBucks = freshData.cubeBucks || 0;
+            const freshHats = freshData.hats || [];
 
-            if (bucks < item.cost) {
+            if (freshBucks < item.cost) {
               alert("Not enough Cube Bucks!");
               return;
             }
 
+            if (freshHats.includes(item.id)) {
+              alert("You already own this hat!");
+              renderShop();
+              return;
+            }
+
+            // Update Firestore: deduct bucks and add hat
             await updateDoc(userRef, {
-              cubeBucks: bucks - item.cost,
+              cubeBucks: freshBucks - item.cost,
               hats: arrayUnion(item.id)
             });
 
@@ -163,6 +178,13 @@
 
         container.appendChild(div);
       });
+
+      // Show current Cube Bucks balance on top or bottom (optional)
+      const bucksDisplay = document.createElement("p");
+      bucksDisplay.textContent = `Your Cube Bucks: ${cubeBucks}`;
+      bucksDisplay.style.fontWeight = "bold";
+      bucksDisplay.style.marginTop = "30px";
+      container.appendChild(bucksDisplay);
     }
   </script>
 </body>
