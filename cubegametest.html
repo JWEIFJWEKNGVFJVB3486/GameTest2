@@ -35,9 +35,10 @@
   <div id="leaderboard"><strong>Players</strong><br><ul id="board"></ul></div>
   <input id="chatInput" placeholder="Type your message..." maxlength="50" />
 
-  <script type="module">
-    import * as THREE from 'https://unpkg.com/three@0.176.0/build/three.module.js';
-    import { OrbitControls } from 'https://unpkg.com/three@0.176.0/examples/jsm/controls/OrbitControls.js';
+<script type="module">
+  import * as THREE from 'https://unpkg.com/three@0.176.0/build/three.module.js';
+  import { OrbitControls } from 'https://unpkg.com/three@0.176.0/examples/jsm/controls/OrbitControls.js';
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
