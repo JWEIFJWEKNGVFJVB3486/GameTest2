@@ -76,115 +76,109 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, updateDoc, arrayUnion, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.appspot.com",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
-    };
+const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.appspot.com",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
+};
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    const shopItems = [
-      {
-        id: "fedora",
-        name: "Classic Fedora",
-        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png",
-        cost: 25
-      },
-      {
-        id: "partycone",
-        name: "Party Cone",
-        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png",
-        cost: 10
-      },
-      {
-        id: "wizard",
-        name: "Wizard Hat",
-        img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png",
-        cost: 40
-      }
-    ];
+let currentUserUid = null;
 
-    let currentUserUid = null;
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
+  currentUserUid = user.uid;
+  await renderShop();
+});
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      currentUserUid = user.uid;
-      renderShop();
+async function getAllHatsFromFirestore() {
+  const hatsCol = collection(db, "hats");
+  const snapshot = await getDocs(hatsCol);
+  const hats = [];
+  snapshot.forEach(doc => {
+    hats.push({
+      id: doc.id,
+      ...doc.data()
     });
+  });
+  return hats;
+}
 
-    async function renderShop() {
-      const container = document.getElementById("shop-container");
-      container.innerHTML = "";
+async function renderShop() {
+  const container = document.getElementById("shop-container");
+  container.innerHTML = "";
 
-      const userRef = doc(db, "users", currentUserUid);
-      const docSnap = await getDoc(userRef);
-      const userData = docSnap.exists() ? docSnap.data() : {};
-      const ownedHats = userData.hats || [];
-      let cubeBucks = userData.cubeBucks || 0;
+  const userRef = doc(db, "users", currentUserUid);
+  const docSnap = await getDoc(userRef);
+  const userData = docSnap.exists() ? docSnap.data() : {};
+  const ownedHats = userData.hats || [];
+  let cubeBucks = userData.cubeBucks || 0;
 
-      shopItems.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "shop-item";
+  const shopItems = await getAllHatsFromFirestore();
 
-        div.innerHTML = `
-          <h3>${item.name}</h3>
-          <img src="${item.img}" alt="${item.name}" />
-          <p>Cost: ${item.cost} Cube Bucks</p>
-          <button ${ownedHats.includes(item.id) ? "disabled" : ""}>
-            ${ownedHats.includes(item.id) ? "Owned" : "Buy"}
-          </button>
-        `;
+  shopItems.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "shop-item";
 
-        const btn = div.querySelector("button");
-        if (!ownedHats.includes(item.id)) {
-          btn.onclick = async () => {
-            // Re-get user data fresh to avoid race conditions
-            const freshSnap = await getDoc(userRef);
-            const freshData = freshSnap.exists() ? freshSnap.data() : {};
-            const freshBucks = freshData.cubeBucks || 0;
-            const freshHats = freshData.hats || [];
+    div.innerHTML = `
+      <h3>${item.name}</h3>
+      <img src="${item.imageUrl}" alt="${item.name}" />
+      <p>Cost: ${item.price} Cube Bucks</p>
+      <button ${ownedHats.includes(item.id) ? "disabled" : ""}>
+        ${ownedHats.includes(item.id) ? "Owned" : "Buy"}
+      </button>
+    `;
 
-            if (freshBucks < item.cost) {
-              alert("Not enough Cube Bucks!");
-              return;
-            }
+    const btn = div.querySelector("button");
+    if (!ownedHats.includes(item.id)) {
+      btn.onclick = async () => {
+        const freshSnap = await getDoc(userRef);
+        const freshData = freshSnap.exists() ? freshSnap.data() : {};
+        const freshBucks = freshData.cubeBucks || 0;
+        const freshHats = freshData.hats || [];
 
-            if (freshHats.includes(item.id)) {
-              alert("You already own this hat!");
-              renderShop();
-              return;
-            }
-
-            // Update Firestore: deduct bucks and add hat
-            await updateDoc(userRef, {
-              cubeBucks: freshBucks - item.cost,
-              hats: arrayUnion(item.id)
-            });
-
-            alert(`Purchased ${item.name}!`);
-            renderShop();
-          };
+        if (freshBucks < item.price) {
+          alert("Not enough Cube Bucks!");
+          return;
         }
 
-        container.appendChild(div);
-      });
+        if (freshHats.includes(item.id)) {
+          alert("You already own this hat!");
+          renderShop();
+          return;
+        }
 
-      // Show current Cube Bucks balance on top or bottom (optional)
-      const bucksDisplay = document.createElement("p");
-      bucksDisplay.textContent = `Your Cube Bucks: ${cubeBucks}`;
-      bucksDisplay.style.fontWeight = "bold";
-      bucksDisplay.style.marginTop = "30px";
-      container.appendChild(bucksDisplay);
+        await updateDoc(userRef, {
+          cubeBucks: freshBucks - item.price,
+          hats: arrayUnion(item.id)
+        });
+
+        alert(`Purchased ${item.name}!`);
+        renderShop();
+      };
+    }
+
+    container.appendChild(div);
+  });
+
+  const bucksDisplay = document.createElement("p");
+  bucksDisplay.textContent = `Your Cube Bucks: ${cubeBucks}`;
+  bucksDisplay.style.fontWeight = "bold";
+  bucksDisplay.style.marginTop = "30px";
+  container.appendChild(bucksDisplay);
+
     }
   </script>
 </body>
