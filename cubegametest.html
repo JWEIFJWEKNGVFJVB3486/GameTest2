@@ -1,9 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>3D Cube Multiplayer</title>
+  <title>Game</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: "Comic Sans MS", cursive; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+    }
+
+    canvas {
+      display: block;
+      background: #eef;
+    }
+
     #leaderboard {
       position: absolute;
       top: 10px;
@@ -16,29 +26,27 @@
       max-height: 80vh;
       overflow-y: auto;
     }
+
     #chatInput {
       position: absolute;
       bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      font-family: "Comic Sans MS", cursive;
+      font-family: "Comic Sans MS", cursive, sans-serif;
       font-size: 16px;
       padding: 8px 12px;
       border-radius: 6px;
       border: 1px solid #aaa;
       display: none;
-      z-index: 10;
     }
   </style>
 </head>
 <body>
+  <canvas id="game"></canvas>
   <div id="leaderboard"><strong>Players</strong><br><ul id="board"></ul></div>
   <input id="chatInput" placeholder="Type your message..." maxlength="50" />
 
-<script type="module">
-  import * as THREE from 'https://unpkg.com/three@0.176.0/build/three.module.js';
-  import { OrbitControls } from 'https://unpkg.com/three@0.176.0/examples/jsm/controls/OrbitControls.js';
-
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -60,119 +68,78 @@
     const firestore = getFirestore(app);
     const realtimeDb = getDatabase(app);
 
-    const leaderboard = document.getElementById("board");
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const board = document.getElementById("board");
     const chatInput = document.getElementById("chatInput");
 
-    // THREE.js setup
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    // Fullscreen canvas
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    camera.position.set(0, 30, 50);
-    controls.update();
-
-    // Light and ground
-    scene.add(new THREE.AmbientLight(0xffffff));
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(500, 500),
-      new THREE.MeshBasicMaterial({ color: 0xa0a0a0 })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    scene.add(ground);
-
-    // Store player objects
-    const playerMeshes = {};
-    let localPlayer = null;
+    let player = null;
     let playerRef = null;
     let players = {};
 
-    // Resize handler
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    function createPlayerMesh(color, username) {
-      const group = new THREE.Group();
-
-      const body = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 4, 2),
-        new THREE.MeshStandardMaterial({ color })
-      );
-      body.position.y = 2;
-      group.add(body);
-
-      const nameTag = createTextSprite(username);
-      nameTag.position.y = 6;
-      group.add(nameTag);
-
-      return group;
-    }
-
-    function createTextSprite(message) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.font = '20px Comic Sans MS';
-      canvas.width = ctx.measureText(message).width + 20;
-      canvas.height = 30;
-      ctx.font = '20px Comic Sans MS';
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'black';
-      ctx.fillText(message, 10, 20);
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.scale.set(canvas.width / 10, canvas.height / 10, 1);
-      return sprite;
-    }
-
-    function updatePlayers() {
+    // Draw all players
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (const uid in players) {
         const p = players[uid];
-        if (!playerMeshes[uid]) {
-          const mesh = createPlayerMesh(p.color || "#000", p.username || "?");
-          scene.add(mesh);
-          playerMeshes[uid] = mesh;
-        }
-        const mesh = playerMeshes[uid];
-        mesh.position.set(p.x, 0, p.y);
+        ctx.fillStyle = p.color || "#000";
+        ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
 
-        // Update speech bubble
-        mesh.children = mesh.children.filter(child => child.type !== 'Sprite' || child.userData.type !== 'chat');
+        // Username
+        ctx.fillStyle = "black";
+        ctx.font = "14px Comic Sans MS";
+        ctx.fillText(p.username || "?", p.x - 10, p.y - 15);
+
+        // Speech bubble
         if (p.chat) {
-          const bubble = createTextSprite(p.chat);
-          bubble.position.y = 8;
-          bubble.userData.type = 'chat';
-          mesh.add(bubble);
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.font = "12px Comic Sans MS";
+          const textWidth = ctx.measureText(p.chat).width;
+          ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
+          ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
+          ctx.fillStyle = "black";
+          ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 22);
         }
       }
+    }
 
-      // Remove disconnected players
-      for (const uid in playerMeshes) {
-        if (!players[uid]) {
-          scene.remove(playerMeshes[uid]);
-          delete playerMeshes[uid];
-        }
-      }
-
-      // Update leaderboard
-      leaderboard.innerHTML = "";
+    function updateLeaderboard() {
+      board.innerHTML = "";
       for (const uid in players) {
+        const p = players[uid];
         const li = document.createElement("li");
-        li.textContent = players[uid].username || "?";
-        leaderboard.appendChild(li);
+        li.textContent = p.username || "?";
+        board.appendChild(li);
       }
+    }
+
+    function loop() {
+      if (!player) return;
+      let moved = false;
+      if (keys["w"]) { player.y -= 2; moved = true; }
+      if (keys["s"]) { player.y += 2; moved = true; }
+      if (keys["a"]) { player.x -= 2; moved = true; }
+      if (keys["d"]) { player.x += 2; moved = true; }
+      if (moved) {
+        set(playerRef, player);
+      }
+      draw();
+      updateLeaderboard();
+      requestAnimationFrame(loop);
     }
 
     const keys = {};
     window.addEventListener("keydown", e => {
       keys[e.key.toLowerCase()] = true;
-
       if (e.key === "Enter") {
         if (chatInput.style.display === "none") {
           chatInput.style.display = "block";
@@ -180,38 +147,21 @@
         } else {
           const msg = chatInput.value.trim();
           if (msg) {
-            localPlayer.chat = msg;
-            set(playerRef, localPlayer);
+            player.chat = msg;
+            set(playerRef, player);
             setTimeout(() => {
-              if (localPlayer && localPlayer.chat === msg) {
-                delete localPlayer.chat;
-                set(playerRef, localPlayer);
+              if (player && player.chat === msg) {
+                delete player.chat;
+                set(playerRef, player);
               }
-            }, 4000);
+            }, 4000); // Clear after 4s
           }
           chatInput.value = "";
           chatInput.style.display = "none";
         }
       }
     });
-
     window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-
-    function animate() {
-      if (localPlayer) {
-        let moved = false;
-        if (keys["w"]) { localPlayer.y -= 0.2; moved = true; }
-        if (keys["s"]) { localPlayer.y += 0.2; moved = true; }
-        if (keys["a"]) { localPlayer.x -= 0.2; moved = true; }
-        if (keys["d"]) { localPlayer.x += 0.2; moved = true; }
-        if (moved) set(playerRef, localPlayer);
-      }
-
-      updatePlayers();
-      controls.update();
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
@@ -219,22 +169,22 @@
       const userDoc = await getDoc(doc(firestore, "users", uid));
       const username = userDoc.exists() ? userDoc.data().username || "Unnamed" : "Guest";
 
-      localPlayer = {
+      player = {
         username,
-        x: Math.random() * 50 - 25,
-        y: Math.random() * 50 - 25,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: Math.random() * (canvas.height - 100) + 50,
         color: "#" + Math.floor(Math.random() * 16777215).toString(16)
       };
 
       playerRef = ref(realtimeDb, "players/" + uid);
-      set(playerRef, localPlayer);
+      set(playerRef, player);
       onDisconnect(playerRef).remove();
 
       onValue(ref(realtimeDb, "players"), (snapshot) => {
         players = snapshot.val() || {};
       });
 
-      animate();
+      loop();
     });
   </script>
 </body>
