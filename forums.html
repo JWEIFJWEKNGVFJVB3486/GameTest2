@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Forums - BrickBugs</title>
+  <title>BrickBugs Forums</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #e3f2fd;
       margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
     }
 
     .navbar {
@@ -21,85 +20,84 @@
       align-items: center;
     }
 
-    .navbar a {
-      color: white;
-      text-decoration: none;
-      margin-left: 20px;
+    .logo {
+      font-weight: bold;
+      font-size: 1.5em;
     }
 
-    .container {
-      max-width: 700px;
-      margin: 20px auto;
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      margin-left: 15px;
+      font-size: 1em;
+    }
+
+    .content {
       padding: 20px;
+    }
+
+    #post-list {
+      margin-top: 20px;
+    }
+
+    .post {
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     textarea {
       width: 100%;
       padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
       resize: vertical;
+      min-height: 60px;
+      font-size: 1em;
+      margin-bottom: 10px;
     }
 
     button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
+      padding: 8px 14px;
       border: none;
+      background: #28a745;
+      color: white;
+      font-weight: bold;
       border-radius: 5px;
       cursor: pointer;
-    }
-
-    .post {
-      border: 1px solid #ccc;
-      background: #f9f9f9;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 5px;
-    }
-
-    .post small {
-      color: gray;
     }
   </style>
 </head>
 <body>
 
   <div class="navbar">
-    <div class="logo"><strong>BrickBugs</strong> Forums</div>
-    <div>
-      <a href="dashboard.html">🏠 Dashboard</a>
-      <a href="#" onclick="logout()">🚪 Logout</a>
+    <div class="logo">BrickBugs</div>
+    <div class="nav-links">
+      <a href="home.html">🏠 Home</a>
+      <a href="forums.html">🗨️ Forums</a>
     </div>
   </div>
 
-  <div class="container">
-    <h2>🗨️ Community Forum</h2>
-    <p>Share your thoughts with the BrickBugs community!</p>
-    
-    <textarea id="postContent" rows="4" placeholder="Write a post..."></textarea>
+  <div class="content">
+    <h2>🗨️ Community Forums</h2>
+    <p>Share a post or question below:</p>
+    <textarea id="post-content" placeholder="What's on your mind?"></textarea><br>
     <button onclick="submitPost()">Post</button>
 
-    <hr>
-    <div id="posts"></div>
+    <div id="post-list"></div>
   </div>
 
-  <!-- Firebase Scripts -->
+  <!-- Firebase Modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore,
       collection,
       addDoc,
-      getDocs,
       query,
       orderBy,
+      onSnapshot,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -118,70 +116,54 @@
 
     let currentUser = null;
 
-    // Check login status
     onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
+      if (user) {
         currentUser = user;
         loadPosts();
+      } else {
+        window.location.href = "index.html";
       }
     });
 
     // Submit new forum post
-    async function submitPost() {
-      const content = document.getElementById("postContent").value.trim();
-      if (!content) {
-        alert("Please write something!");
-        return;
-      }
+    window.submitPost = async function submitPost() {
+      const content = document.getElementById("post-content").value.trim();
+      if (content === "") return alert("Post cannot be empty.");
 
       try {
         await addDoc(collection(db, "forumPosts"), {
+          content,
           uid: currentUser.uid,
           email: currentUser.email,
-          content: content,
           timestamp: serverTimestamp()
         });
-        document.getElementById("postContent").value = "";
-        loadPosts();
+        document.getElementById("post-content").value = "";
       } catch (error) {
         console.error("Error posting:", error);
-        alert("Failed to post. Please try again.");
+        alert("Failed to post. Try again.");
       }
-    }
+    };
 
     // Load and display posts
-    async function loadPosts() {
-      const postsDiv = document.getElementById("posts");
-      postsDiv.innerHTML = "<p>Loading posts...</p>";
-
+    function loadPosts() {
+      const postList = document.getElementById("post-list");
       const q = query(collection(db, "forumPosts"), orderBy("timestamp", "desc"));
-      const querySnapshot = await getDocs(q);
 
-      postsDiv.innerHTML = "";
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const date = data.timestamp?.toDate().toLocaleString() || "Just now";
-        const postHTML = `
-          <div class="post">
-            <strong>${data.email}</strong><br>
-            <small>${date}</small>
-            <p>${data.content}</p>
-          </div>
-        `;
-        postsDiv.innerHTML += postHTML;
-      }); 
-    }
-
-    // Logout
-    window.logout = function logout() {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      }).catch((error) => {
-        console.error("Logout error:", error);
+      onSnapshot(q, (snapshot) => {
+        postList.innerHTML = "";
+        snapshot.forEach((doc) => {
+          const post = doc.data();
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `
+            <strong>${post.email}</strong><br>
+            <p>${post.content}</p>
+            <small>${post.timestamp?.toDate().toLocaleString() || "Just now"}</small>
+          `;
+          postList.appendChild(div);
+        });
       });
-    };
+    }
   </script>
 </body>
 </html>
