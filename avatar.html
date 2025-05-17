@@ -41,6 +41,13 @@
       width: 120px;
       pointer-events: none;
       user-select: none;
+      /* Added border for debug visibility */
+      border: 2px solid transparent;
+      transition: border-color 0.3s;
+    }
+
+    #equipped-hat.visible {
+      border-color: #4CAF50;
     }
 
     #color-picker {
@@ -168,27 +175,45 @@
         const newColor = e.target.value;
         avatarCube.style.backgroundColor = newColor;
         userData.avatarColor = newColor;
-        await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
+        try {
+          await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
+        } catch (err) {
+          alert("Failed to update avatar color: " + err.message);
+        }
       };
     }
 
     function updateEquippedHat() {
+      console.log("Updating equipped hat to:", userData.equippedHat);
       if (userData.equippedHat) {
         const hatInfo = shopItems.find(hat => hat.id === userData.equippedHat);
+        console.log("Found hat info:", hatInfo);
         if (hatInfo) {
-          equippedHatImg.src = hatInfo.img;
-          equippedHatImg.alt = hatInfo.name;
-          equippedHatImg.style.display = "block";
+          // Force reload by clearing src first
+          equippedHatImg.src = "";
+          // Use a tiny timeout to force browser update, can be removed if not needed
+          setTimeout(() => {
+            equippedHatImg.src = hatInfo.img;
+            equippedHatImg.alt = hatInfo.name;
+            equippedHatImg.style.display = "block";
+            equippedHatImg.classList.add("visible");
+          }, 10);
           return;
         }
       }
       equippedHatImg.style.display = "none";
       equippedHatImg.src = "";
       equippedHatImg.alt = "";
+      equippedHatImg.classList.remove("visible");
     }
 
     function renderOwnedHats() {
       ownedHatsContainer.innerHTML = "";
+      if (userData.hats.length === 0) {
+        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
+        return;
+      }
+
       userData.hats.forEach(hatId => {
         const hatInfo = shopItems.find(hat => hat.id === hatId);
         if (!hatInfo) return;
@@ -209,17 +234,20 @@
           } else {
             userData.equippedHat = hatId;
           }
-          await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+          // Update UI immediately
           updateEquippedHat();
           renderOwnedHats();
+
+          // Save to Firestore with error handling
+          try {
+            await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+          } catch (err) {
+            alert("Failed to save equipped hat: " + err.message);
+          }
         };
 
         ownedHatsContainer.appendChild(hatImg);
       });
-
-      if (userData.hats.length === 0) {
-        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
-      }
     }
   </script>
 </body>
