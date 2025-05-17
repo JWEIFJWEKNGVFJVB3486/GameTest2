@@ -26,9 +26,9 @@
   <div class="content">
     <h2>Welcome to BrickBugs!</h2>
     <p>This is your account dashboard.</p>
-    <button id="earn-btn" onclick="earnCubeBucks()">💸 Get Cube Bucks</button><br><br>
-    <button onclick="window.location.href='cubegametest.html'">🟦 Play Cube Sandbox</button>
-    <button onclick="window.location.href='forums.html'">💬 Forums</button>
+    <button id="earn-btn" onclick="earnCubeBucks()">Get Cube Bucks</button><br><br>
+    <button onclick="window.location.href='cubegametest.html'">Play Cube Sandbox</button>
+    <button onclick="window.location.href='forums.html'">Forums</button>
   </div>
 
   <!-- Firebase Modular SDK -->
@@ -69,7 +69,7 @@
 
             userInfo.innerHTML = `
               👤 ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
-              💰 Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
+              Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
               <button onclick="logout()">Logout</button>
             `;
           } else {
