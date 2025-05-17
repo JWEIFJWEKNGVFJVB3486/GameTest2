@@ -1,101 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sign Up / Log In</title>
+  <title>BrickBugs</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
-    body { font-family: Arial; background:#cbe8ff; display:flex; justify-content:center; align-items:center; height:100vh; }
-    .box{background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,.2); width:300px;}
-    input,select,button{width:100%; margin-top:10px; padding:10px;}
-    .message{margin-top:10px; text-align:center;}
-    h2{margin-bottom:5px;} hr{margin:20px 0;}
+     body {
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      background-color: #b6e59e;
+      margin: 0;
+      padding: 0;
+    }
+
+    .banner {
+      background-color: #4CAF50;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .login-box {
+      background: white;
+      border: 2px solid #4CAF50;
+      width: 400px;
+      padding: 20px;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+    }
+
+    .login-box h2 {
+      margin: 0 0 15px;
+      font-size: 18px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 8px;
+      color: #4CAF50;
+    }
+
+    input, select, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 14px;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h2>Create Account</h2>
-    <input id="signup-username" placeholder="Username"                  required>
-    <input id="signup-email"    placeholder="Email (kept private)" type="email" required>
-    <input id="signup-password" placeholder="Password"            type="password" required>
-    <select id="gender">
-      <option value="">Select Gender</option>
-      <option value="Boy">Boy</option>
-      <option value="Girl">Girl</option>
-    </select>
-    <button onclick="signup()">Sign Up</button>
 
-    <hr>
+  <div class="banner">
+    BrickBugs digital hangout - Have fun and chat.
+  </div>
 
-    <h2>Log In</h2>
-    <input id="login-username" placeholder="Username" required>
-    <input id="login-password" placeholder="Password" type="password" required>
-    <button onclick="login()">Log In</button>
+  <div class="container">
+    <div class="login-box">
+      <h2>Create Account</h2>
+      <input id="signup-username" placeholder="Username" required>
+      <input id="signup-email" placeholder="Email (kept private)" type="email" required>
+      <input id="signup-password" placeholder="Password" type="password" required>
+      <select id="gender">
+        <option value="">Select Gender</option>
+        <option value="Boy">Boy</option>
+        <option value="Girl">Girl</option>
+      </select>
+      <button onclick="signup()">Sign Up</button>
 
-    <div class="message" id="message"></div>
+      <h2>Log In</h2>
+      <input id="login-username" placeholder="Username" required>
+      <input id="login-password" placeholder="Password" type="password" required>
+      <button onclick="login()">Log In</button>
+
+      <div class="message" id="message"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Friend site not supposed to be for anything major. 2025.
   </div>
 
 <script>
-/* ---------- Firebase ---------- */
-const firebaseConfig = {
-  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-  authDomain: "gametest2-ba5fe.firebaseapp.com",
-  projectId: "gametest2-ba5fe",
-  storageBucket: "gametest2-ba5fe.appspot.com",
-  messagingSenderId: "1063979387642",
-  appId: "1:1063979387642:web:307e4621ae0394bcb49743"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743"
+  };
 
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.firestore();
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
 
-/* ---------- Sign‑up ---------- */
-async function signup() {
-  const username = document.getElementById("signup-username").value.trim();
-  const email    = document.getElementById("signup-email").value.trim();
-  const password = document.getElementById("signup-password").value.trim();
-  const gender   = document.getElementById("gender").value;
-  const msg      = document.getElementById("message");
+  async function signup() {
+    const username = document.getElementById("signup-username").value.trim();
+    const email    = document.getElementById("signup-email").value.trim();
+    const password = document.getElementById("signup-password").value.trim();
+    const gender   = document.getElementById("gender").value;
+    const msg      = document.getElementById("message");
 
-  if (!username || !email || !password || !gender) {
-    msg.textContent = "Please fill out every field."; msg.style.color="red"; return;
+    if (!username || !email || !password || !gender) {
+      msg.textContent = "Please fill out every field."; msg.style.color="red"; return;
+    }
+
+    const existing = await db.collection("users").where("username","==",username).limit(1).get();
+    if (!existing.empty) { msg.textContent="Username already in use."; msg.style.color="red"; return; }
+
+    try {
+      const { user } = await auth.createUserWithEmailAndPassword(email,password);
+      await db.collection("users").doc(user.uid).set({
+        username, email, gender, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      msg.textContent = "Account created! Redirecting…"; msg.style.color="green";
+      setTimeout(()=>location.href="home.html",1500);
+    } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
   }
 
-  /* (Optional) check if username is taken */
-  const existing = await db.collection("users").where("username","==",username).limit(1).get();
-  if (!existing.empty) { msg.textContent="Username already in use."; msg.style.color="red"; return; }
+  async function login() {
+    const username = document.getElementById("login-username").value.trim();
+    const password = document.getElementById("login-password").value.trim();
+    const msg      = document.getElementById("message");
 
-  try {
-    const { user } = await auth.createUserWithEmailAndPassword(email,password);
-    await db.collection("users").doc(user.uid).set({
-      username, email, gender, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    msg.textContent = "Account created! Redirecting…"; msg.style.color="green";
-    setTimeout(()=>location.href="home.html",1500);
-  } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
-}
+    if (!username || !password) { msg.textContent="Enter username & password."; msg.style.color="red"; return; }
 
-/* ---------- Log‑in with username ---------- */
-async function login() {
-  const username = document.getElementById("login-username").value.trim();
-  const password = document.getElementById("login-password").value.trim();
-  const msg      = document.getElementById("message");
-
-  if (!username || !password) { msg.textContent="Enter username & password."; msg.style.color="red"; return; }
-
-  try {
-    /* 1️⃣ Look up email that belongs to this username */
-    const snap = await db.collection("users").where("username","==",username).limit(1).get();
-    if (snap.empty) throw new Error("Username not found.");
-    const userDoc = snap.docs[0].data();
-    /* 2️⃣ Sign‑in with the underlying email */
-    await auth.signInWithEmailAndPassword(userDoc.email,password);
-    msg.textContent="Login successful! Redirecting…"; msg.style.color="green";
-    setTimeout(()=>location.href="home.html",1500);
-  } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
-}
+    try {
+      const snap = await db.collection("users").where("username","==",username).limit(1).get();
+      if (snap.empty) throw new Error("Username not found.");
+      const userDoc = snap.docs[0].data();
+      await auth.signInWithEmailAndPassword(userDoc.email,password);
+      msg.textContent="Login successful! Redirecting…"; msg.style.color="green";
+      setTimeout(()=>location.href="home.html",1500);
+    } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
+  }
 </script>
+
 </body>
 </html>
