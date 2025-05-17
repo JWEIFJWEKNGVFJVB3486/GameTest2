@@ -1,57 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Multiplayer Cube Sandbox</title>
+  <title>Multiplayer Game with Leaderboard</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      background: #e0f7fa;
+      display: block;
+    }
+    #leaderboard {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 10px;
+      min-width: 150px;
+    }
+    #leaderboard h3 {
+      margin: 0 0 5px;
+      font-size: 16px;
+    }
+    #leaderboard ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #leaderboard li {
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
   </style>
 </head>
 <body>
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="leaderboard">
+    <h3>Leaderboard</h3>
+    <ul id="leaderboardList"></ul>
+  </div>
+
   <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
-    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/jsm/controls/OrbitControls.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    let scene, camera, renderer, playerCube;
-    const remotePlayers = {};
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7",
+      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com"
+    };
 
-    init();
-    animate();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    function init() {
-      // Initialize the scene, camera, and renderer
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = 5;
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const leaderboardList = document.getElementById("leaderboardList");
 
-      renderer = new THREE.WebGLRenderer();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+    const username = prompt("Enter your username:");
+    const playerId = "player_" + Math.random().toString(36).substring(2, 9);
+    const playerRef = ref(db, `players/${playerId}`);
+    const playersRef = ref(db, "players");
 
-      // Initialize OrbitControls correctly (using the imported class)
-      const controls = new OrbitControls(camera, renderer.domElement);
+    let players = {};
 
-      const geometry = new THREE.BoxGeometry();
-      const material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-      playerCube = new THREE.Mesh(geometry, material);
-      scene.add(playerCube);
+    let player = {
+      username: username || "Guest",
+      x: Math.random() * 700 + 50,
+      y: Math.random() * 500 + 50,
+      color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+      score: 0
+    };
 
-      window.addEventListener('keydown', onKeyDown);
+    set(playerRef, player);
+    onDisconnect(playerRef).remove();
+
+    // Movement
+    const keys = {};
+    window.addEventListener("keydown", e => keys[e.key] = true);
+    window.addEventListener("keyup", e => keys[e.key] = false);
+
+    function update() {
+      if (keys["w"]) player.y -= 2;
+      if (keys["s"]) player.y += 2;
+      if (keys["a"]) player.x -= 2;
+      if (keys["d"]) player.x += 2;
+
+      // Dummy scoring: increase score while moving
+      if (keys["w"] || keys["a"] || keys["s"] || keys["d"]) {
+        player.score += 1;
+      }
+
+      set(playerRef, player);
     }
 
-    function onKeyDown(e) {
-      const step = 0.2;
-      if (e.key === 'ArrowUp') playerCube.position.z -= step;
-      if (e.key === 'ArrowDown') playerCube.position.z += step;
-      if (e.key === 'ArrowLeft') playerCube.position.x -= step;
-      if (e.key === 'ArrowRight') playerCube.position.x += step;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let id in players) {
+        const p = players[id];
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+        ctx.fillStyle = "black";
+        ctx.fillText(p.username, p.x - 10, p.y - 15);
+      }
     }
 
-    function animate() {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
+    function updateLeaderboard() {
+      const sorted = Object.values(players).sort((a, b) => b.score - a.score);
+      leaderboardList.innerHTML = "";
+      sorted.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = `${p.username}: ${p.score}`;
+        leaderboardList.appendChild(li);
+      });
     }
+
+    function gameLoop() {
+      update();
+      draw();
+      updateLeaderboard();
+      requestAnimationFrame(gameLoop);
+    }
+
+    onValue(playersRef, snapshot => {
+      players = snapshot.val() || {};
+    });
+
+    gameLoop();
   </script>
 </body>
 </html>
