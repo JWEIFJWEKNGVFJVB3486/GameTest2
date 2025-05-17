@@ -31,8 +31,10 @@
       border-radius: 15px;
       position: relative;
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      transition: background-color 0.3s ease;
     }
 
+    /* Remove green outline from equipped hat on cube */
     #equipped-hat {
       position: absolute;
       top: -40px;
@@ -41,13 +43,9 @@
       width: 120px;
       pointer-events: none;
       user-select: none;
-      /* Added border for debug visibility */
-      border: 2px solid transparent;
-      transition: border-color 0.3s;
-    }
-
-    #equipped-hat.visible {
-      border-color: #4CAF50;
+      border: none !important; /* important to override any borders */
+      box-shadow: none !important; /* remove any shadow outlines */
+      transition: filter 0.3s ease;
     }
 
     #color-picker {
@@ -56,6 +54,7 @@
       padding: 8px;
       border-radius: 6px;
       border: 2px solid #4CAF50;
+      cursor: pointer;
     }
 
     #owned-hats-container img {
@@ -160,7 +159,7 @@
     }
 
     function setupUI() {
-      // Set cube color
+      // Set cube color and picker value
       avatarCube.style.backgroundColor = userData.avatarColor;
       colorPicker.value = userData.avatarColor;
 
@@ -170,50 +169,34 @@
       // Show owned hats
       renderOwnedHats();
 
-      // Setup color picker event
+      // Setup color picker event - allow full color range (including shades)
       colorPicker.oninput = async (e) => {
         const newColor = e.target.value;
         avatarCube.style.backgroundColor = newColor;
         userData.avatarColor = newColor;
-        try {
-          await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
-        } catch (err) {
-          alert("Failed to update avatar color: " + err.message);
-        }
+        await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
       };
     }
 
     function updateEquippedHat() {
-      console.log("Updating equipped hat to:", userData.equippedHat);
       if (userData.equippedHat) {
         const hatInfo = shopItems.find(hat => hat.id === userData.equippedHat);
-        console.log("Found hat info:", hatInfo);
         if (hatInfo) {
-          // Force reload by clearing src first
-          equippedHatImg.src = "";
-          // Use a tiny timeout to force browser update, can be removed if not needed
-          setTimeout(() => {
-            equippedHatImg.src = hatInfo.img;
-            equippedHatImg.alt = hatInfo.name;
-            equippedHatImg.style.display = "block";
-            equippedHatImg.classList.add("visible");
-          }, 10);
+          equippedHatImg.src = hatInfo.img;
+          equippedHatImg.alt = hatInfo.name;
+          equippedHatImg.style.display = "block";
+          // Remove any green outline from equipped hat on cube
+          equippedHatImg.classList.remove("equipped");
           return;
         }
       }
       equippedHatImg.style.display = "none";
       equippedHatImg.src = "";
       equippedHatImg.alt = "";
-      equippedHatImg.classList.remove("visible");
     }
 
     function renderOwnedHats() {
       ownedHatsContainer.innerHTML = "";
-      if (userData.hats.length === 0) {
-        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
-        return;
-      }
-
       userData.hats.forEach(hatId => {
         const hatInfo = shopItems.find(hat => hat.id === hatId);
         if (!hatInfo) return;
@@ -222,32 +205,30 @@
         hatImg.src = hatInfo.img;
         hatImg.alt = hatInfo.name;
 
-        // Highlight equipped hat border
+        // Highlight equipped hat border in owned hats container only
         if (userData.equippedHat === hatId) {
           hatImg.classList.add("equipped");
+        } else {
+          hatImg.classList.remove("equipped");
         }
 
         hatImg.onclick = async () => {
           if (userData.equippedHat === hatId) {
-            // Unequip if clicked again
             userData.equippedHat = "";
           } else {
             userData.equippedHat = hatId;
           }
-          // Update UI immediately
+          await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
           updateEquippedHat();
           renderOwnedHats();
-
-          // Save to Firestore with error handling
-          try {
-            await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
-          } catch (err) {
-            alert("Failed to save equipped hat: " + err.message);
-          }
         };
 
         ownedHatsContainer.appendChild(hatImg);
       });
+
+      if (userData.hats.length === 0) {
+        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
+      }
     }
   </script>
 </body>
