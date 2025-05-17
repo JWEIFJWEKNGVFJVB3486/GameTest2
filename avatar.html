@@ -176,62 +176,58 @@
   }
 
   function updateEquippedHat() {
-  if (userData.equippedHat) {
-    const hatInfo = shopItems.find(hat => hat.id === userData.equippedHat);
-    if (hatInfo && hatInfo.img) {
-      equippedHatImg.src = hatInfo.img;
-      equippedHatImg.alt = hatInfo.name || "Equipped Hat";
-      equippedHatImg.style.display = "block";
+    if (userData.equippedHat) {
+      const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
+      if (hatInfo) {
+        equippedHatImg.src = hatInfo.img;
+        equippedHatImg.alt = hatInfo.name;
+        equippedHatImg.style.display = "block";
+        equippedHatImg.classList.remove("equipped");
+        return;
+      }
+    }
+    equippedHatImg.style.display = "none";
+    equippedHatImg.src = "";
+    equippedHatImg.alt = "";
+  }
+
+  function renderOwnedHats() {
+    ownedHatsContainer.innerHTML = "";
+    if (!userData.hats || userData.hats.length === 0) {
+      ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
       return;
     }
+
+    userData.hats.forEach(hatId => {
+      const hatInfo = hatItems.find(hat => hat.id === hatId);
+      if (!hatInfo) return;
+
+      const hatImg = document.createElement("img");
+      hatImg.src = hatInfo.img;
+      hatImg.alt = hatInfo.name;
+
+      if (userData.equippedHat === hatId) {
+        hatImg.classList.add("equipped");
+      }
+
+      hatImg.onclick = async () => {
+        if (userData.equippedHat === hatId) {
+          userData.equippedHat = "";
+        } else {
+          userData.equippedHat = hatId;
+        }
+        await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+        updateEquippedHat();
+        renderOwnedHats();
+      };
+
+      ownedHatsContainer.appendChild(hatImg);
+    });
   }
-  equippedHatImg.style.display = "none";
-  equippedHatImg.src = "";
-  equippedHatImg.alt = "";
-}
-
-
- async function loadShopItems() {
-  const shopItemsCol = collection(db, "shopItems");
-  const shopSnapshot = await getDocs(shopItemsCol);
-  shopItems = shopSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-}
-
-function renderOwnedHats() {
-  ownedHatsContainer.innerHTML = "";
-
-  if (!Array.isArray(userData.hats) || userData.hats.length === 0) {
-    ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
-    return;
-  }
-
-  userData.hats.forEach(hatId => {
-    const hatInfo = shopItems.find(hat => hat.id === hatId);
-    if (!hatInfo || !hatInfo.img) return;
-
-    const hatImg = document.createElement("img");
-    hatImg.src = hatInfo.img;
-    hatImg.alt = hatInfo.name || "Hat";
-    hatImg.loading = "lazy"; // Optional: loads images only when needed
-
-    if (userData.equippedHat === hatId) {
-      hatImg.classList.add("equipped");
-    }
-
-    hatImg.onclick = async () => {
-      userData.equippedHat = userData.equippedHat === hatId ? "" : hatId;
-      await updateDoc(doc(db, "users", currentUserUid), {
-        equippedHat: userData.equippedHat,
-      });
-      updateEquippedHat();
-      renderOwnedHats();
-    };
-
-    ownedHatsContainer.appendChild(hatImg);
-  });
-}
-
 </script>
+
+</body>
+</html>
 
 </body>
 </html>
