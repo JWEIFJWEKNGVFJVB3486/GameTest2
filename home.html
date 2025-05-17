@@ -1,44 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BrickBugs</title>
-
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; background: #e3f2fd; }
-    .navbar {
-      background: #007bff; color: white; padding: 10px 20px;
-      display: flex; justify-content: space-between; align-items: center;
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #e3f2fd;
     }
-    .logo { font-weight: bold; font-size: 1.5em; }
-    .user-info { font-size: 1em; display: flex; align-items: center; gap: 10px; }
-    .content { padding: 20px; }
-    button { background: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 5px; }
-    #earn-btn { background: #4caf50; color: white; margin-top: 10px; }
+
+    .navbar {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-weight: bold;
+      font-size: 1.5em;
+    }
+
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      margin-left: 15px;
+      font-size: 1em;
+    }
+
+    .user-info {
+      font-size: 1em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    button {
+      background: white;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    #earn-btn {
+      background: #4caf50;
+      color: white;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
+
   <div class="navbar">
     <div class="logo">BrickBugs</div>
+    <div class="nav-links">
+      <a href="dashboard.html">🏠 Home</a>
+      <a href="forums.html">🗨️ Forums</a>
+    </div>
     <div class="user-info" id="user-info">Loading...</div>
   </div>
 
   <div class="content">
-    <div class="content">
-  <h2>Welcome to BrickBugs!</h2>
-  <p>This is your account dashboard.</p>
-  <button id="earn-btn" onclick="earnCubeBucks()">💸 Get Cube Bucks</button><br><br>
-<button onclick="window.location.href='cubegametest.html'">🟦 Play Cube Sandbox</button>
-
-      
-</div>
-
-</div>
-
+    <h2>Welcome to BrickBugs!</h2>
+    <p>This is your account dashboard.</p>
+    <button id="earn-btn" onclick="earnCubeBucks()">💸 Get Cube Bucks</button><br><br>
+    <button onclick="window.location.href='cubegametest.html'">🟦 Play Cube Sandbox</button>
   </div>
 
-  <!-- Firebase Modular SDK -->
+  <!-- Firebase Scripts -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -50,8 +88,7 @@
       projectId: "gametest2-ba5fe",
       storageBucket: "gametest2-ba5fe.appspot.com",
       messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -76,7 +113,7 @@
             }
 
             userInfo.innerHTML = `
-              👤 ${data.email} (${data.gender}) |
+              👤 ${data.email} |
               💰 Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
               <button onclick="logout()">Logout</button>
             `;
@@ -115,5 +152,6 @@
       });
     };
   </script>
+
 </body>
 </html>
