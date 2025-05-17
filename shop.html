@@ -88,10 +88,26 @@
     const db = getFirestore(app);
 
     const shopItems = [
-      { name: "Classic Fedora", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Fedora.jpg/240px-Fedora.jpg", cost: 25, id: "fedora" },
-      { name: "Party Cone", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Party_Hat.jpg/240px-Party_Hat.jpg", cost: 10, id: "partycone" },
-      { name: "Wizard Hat", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Wizard_Hat.svg/240px-Wizard_Hat.svg.png", cost: 40, id: "wizard" }
-    ];
+  {
+    name: "Classic Fedora",
+    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png",
+    cost: 25,
+    id: "fedora"
+  },
+  {
+    name: "Party Cone",
+    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png",
+    cost: 10,
+    id: "partycone"
+  },
+  {
+    name: "Wizard Hat",
+    img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png",
+    cost: 40,
+    id: "wizard"
+  }
+];
+
 
     let currentUserUid = null;
 
