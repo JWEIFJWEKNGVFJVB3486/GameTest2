@@ -2,74 +2,101 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Customize Avatar</title>
+  <title>BrickBugs Avatar</title>
   <style>
     body {
-      margin: 0;
       font-family: "Comic Sans MS", cursive, sans-serif;
-      background: #f5f5f5;
+      background-color: #f0ffe5;
+      margin: 0;
+      padding: 20px;
       text-align: center;
     }
 
-    .navbar {
-      background: #4CAF50;
-      color: white;
-      padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    h1 {
+      color: #4CAF50;
     }
 
-    .avatar-container {
-      margin: 30px auto;
+    #avatar-container {
+      margin: 20px auto;
+      width: 150px;
+      height: 150px;
+      position: relative;
     }
 
-    canvas {
-      background: #fff;
-      border: 2px solid #ccc;
-      margin-top: 20px;
+    #avatar-cube {
+      width: 150px;
+      height: 150px;
+      background-color: #3498db;
+      margin: 0 auto;
+      border-radius: 15px;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
     }
 
-    .items {
-      margin: 20px;
+    #equipped-hat {
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      pointer-events: none;
+      user-select: none;
     }
 
-    button, select {
-      padding: 10px;
-      margin: 5px;
-      font-family: "Comic Sans MS", cursive;
-      font-size: 1em;
+    #color-picker {
+      margin: 20px auto;
+      font-size: 1.1em;
+      padding: 8px;
       border-radius: 6px;
       border: 2px solid #4CAF50;
     }
 
-    button:hover {
-      background: #c8f7c5;
+    #owned-hats-container img {
+      width: 80px;
+      margin: 8px;
+      cursor: pointer;
+      border: 3px solid transparent;
+      border-radius: 10px;
+      transition: border-color 0.3s;
     }
 
-    .item-button.active {
-      background: #4CAF50;
-      color: white;
+    #owned-hats-container img.equipped {
+      border-color: #4CAF50;
+    }
+
+    .top-bar {
+      text-align: right;
+      margin-bottom: 20px;
+    }
+
+    .top-bar button {
+      margin-left: 10px;
+      background: #ffb6c1;
+      color: black;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 2px solid #ff69b4;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div class="navbar">
-    <div><strong>BrickBugs Avatar</strong></div>
-    <button onclick="location.href='home.html'">Home</button>
+  <div class="top-bar">
+    <button onclick="window.location.href='home.html'">🏠 Home</button>
   </div>
 
-  <div class="avatar-container">
-    <canvas id="avatar" width="300" height="300"></canvas>
-    <br>
-    <label>Cube Color:</label>
-    <input type="color" id="colorPicker" />
+  <h1>Your Avatar</h1>
+
+  <div id="avatar-container">
+    <div id="avatar-cube"></div>
+    <img id="equipped-hat" src="" alt="" style="display:none" />
   </div>
 
-  <div class="items">
-    <h3>Your Hats</h3>
-    <div id="hatList">Loading hats...</div>
-  </div>
+  <label for="color-picker">Change Cube Color: </label>
+  <input type="color" id="color-picker" value="#3498db" />
+
+  <h2>Your Owned Hats (Click to Equip/Unequip)</h2>
+  <div id="owned-hats-container"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -90,79 +117,110 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const canvas = document.getElementById("avatar");
-    const ctx = canvas.getContext("2d");
-    const colorPicker = document.getElementById("colorPicker");
-    const hatList = document.getElementById("hatList");
+    const shopItems = [
+      { id: "fedora", name: "Classic Fedora", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png" },
+      { id: "partycone", name: "Party Cone", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png" },
+      { id: "wizard", name: "Wizard Hat", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png" }
+    ];
 
-    let cubeColor = "#ffcc00";
-    let equippedHat = null;
-    let userDocRef = null;
+    let currentUserUid = null;
+    let userData = null;
 
-    function drawAvatar() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = cubeColor;
-      ctx.fillRect(100, 100, 100, 100); // Cube
-
-      if (equippedHat) {
-        ctx.fillStyle = "black";
-        ctx.font = "14px Comic Sans MS";
-        ctx.fillText(equippedHat, 120, 90); // Hat label
-      }
-    }
-
-    function renderHats(hats) {
-      hatList.innerHTML = "";
-      if (!hats || hats.length === 0) {
-        hatList.textContent = "No hats owned.";
-        return;
-      }
-
-      hats.forEach(hat => {
-        const btn = document.createElement("button");
-        btn.textContent = hat;
-        if (equippedHat === hat) btn.classList.add("active");
-
-        btn.onclick = async () => {
-          if (equippedHat === hat) {
-            equippedHat = null;
-          } else {
-            equippedHat = hat;
-          }
-          await updateDoc(userDocRef, {
-            equippedHat: equippedHat || null
-          });
-          renderHats(hats);
-          drawAvatar();
-        };
-        hatList.appendChild(btn);
-      });
-    }
-
-    colorPicker.addEventListener("input", async (e) => {
-      cubeColor = e.target.value;
-      drawAvatar();
-      if (userDocRef) {
-        await updateDoc(userDocRef, {
-          cubeColor
-        });
-      }
-    });
+    const avatarCube = document.getElementById("avatar-cube");
+    const equippedHatImg = document.getElementById("equipped-hat");
+    const ownedHatsContainer = document.getElementById("owned-hats-container");
+    const colorPicker = document.getElementById("color-picker");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
-
-      userDocRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userDocRef);
-      const data = snap.data();
-
-      cubeColor = data.cubeColor || "#ffcc00";
-      equippedHat = data.equippedHat || null;
-      colorPicker.value = cubeColor;
-
-      drawAvatar();
-      renderHats(data.hats || []);
+      currentUserUid = user.uid;
+      await loadUserData();
+      setupUI();
     });
+
+    async function loadUserData() {
+      const userRef = doc(db, "users", currentUserUid);
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        userData = docSnap.data();
+        // Set defaults if missing
+        if (!userData.avatarColor) userData.avatarColor = "#3498db";
+        if (!userData.equippedHat) userData.equippedHat = "";
+        if (!userData.hats) userData.hats = [];
+      } else {
+        userData = { avatarColor: "#3498db", equippedHat: "", hats: [] };
+      }
+    }
+
+    function setupUI() {
+      // Set cube color
+      avatarCube.style.backgroundColor = userData.avatarColor;
+      colorPicker.value = userData.avatarColor;
+
+      // Set equipped hat image or hide
+      updateEquippedHat();
+
+      // Show owned hats
+      renderOwnedHats();
+
+      // Setup color picker event
+      colorPicker.oninput = async (e) => {
+        const newColor = e.target.value;
+        avatarCube.style.backgroundColor = newColor;
+        userData.avatarColor = newColor;
+        await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
+      };
+    }
+
+    function updateEquippedHat() {
+      if (userData.equippedHat) {
+        const hatInfo = shopItems.find(hat => hat.id === userData.equippedHat);
+        if (hatInfo) {
+          equippedHatImg.src = hatInfo.img;
+          equippedHatImg.alt = hatInfo.name;
+          equippedHatImg.style.display = "block";
+          return;
+        }
+      }
+      equippedHatImg.style.display = "none";
+      equippedHatImg.src = "";
+      equippedHatImg.alt = "";
+    }
+
+    function renderOwnedHats() {
+      ownedHatsContainer.innerHTML = "";
+      userData.hats.forEach(hatId => {
+        const hatInfo = shopItems.find(hat => hat.id === hatId);
+        if (!hatInfo) return;
+
+        const hatImg = document.createElement("img");
+        hatImg.src = hatInfo.img;
+        hatImg.alt = hatInfo.name;
+
+        // Highlight equipped hat border
+        if (userData.equippedHat === hatId) {
+          hatImg.classList.add("equipped");
+        }
+
+        hatImg.onclick = async () => {
+          if (userData.equippedHat === hatId) {
+            // Unequip if clicked again
+            userData.equippedHat = "";
+          } else {
+            userData.equippedHat = hatId;
+          }
+          await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+          updateEquippedHat();
+          renderOwnedHats();
+        };
+
+        ownedHatsContainer.appendChild(hatImg);
+      });
+
+      if (userData.hats.length === 0) {
+        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
+      }
+    }
   </script>
 </body>
 </html>
