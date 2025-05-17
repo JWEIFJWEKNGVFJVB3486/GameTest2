@@ -123,11 +123,27 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const shopItems = [
-      { id: "fedora", name: "Classic Fedora", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/fedora.png" },
-      { id: "partycone", name: "Party Cone", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/partycone.png" },
-      { id: "wizard", name: "Wizard Hat", img: "https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/wizard.png" }
-    ];
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let shopItems = [];
+
+async function loadShopItems() {
+  const shopItemsCol = collection(db, "shopItems");
+  const shopSnapshot = await getDocs(shopItemsCol);
+  shopItems = shopSnapshot.docs.map(doc => {
+    // Expect doc data to have fields: id, name, img
+    return doc.data();
+  });
+}
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
+  currentUserUid = user.uid;
+  await loadUserData();
+  await loadShopItems(); // <-- dynamically load hats here
+  setupUI();
+});
+
 
     let currentUserUid = null;
     let userData = null;
