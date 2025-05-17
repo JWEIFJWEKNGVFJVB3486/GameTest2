@@ -2,36 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Forums - BrickBugs</title>
+  <title>BrickBugs Forums</title>
   <style>
     body {
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      background: #d9f5c8;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: #d0f0c0;
       margin: 0;
       padding: 0;
     }
     .navbar {
-      background: #4CAF50;
+      background: #228B22;
       color: white;
-      padding: 15px 20px;
+      padding: 10px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 1.5em;
-      border-bottom: 3px solid #388e3c;
     }
     .logo {
       font-weight: bold;
+      font-size: 1.5em;
     }
     .container {
       padding: 20px;
     }
-    textarea, button, select {
-      width: 100%;
+    button, textarea, select, input {
+      font-family: inherit;
       margin-top: 10px;
       padding: 10px;
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      border-radius: 8px;
+      width: 100%;
+      border-radius: 5px;
+      border: none;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      background: #32CD32;
+      color: white;
+      cursor: pointer;
     }
     .post, .reply {
       background: white;
@@ -43,23 +53,8 @@
     .post small, .reply small {
       color: gray;
     }
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .tab {
-      padding: 10px 20px;
-      background: #66bb6a;
-      color: white;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-    .tab.active {
-      background: #388e3c;
-    }
-    .subforum {
-      margin-top: 20px;
+    .replies {
+      margin-left: 20px;
     }
   </style>
 </head>
@@ -71,19 +66,20 @@
 
   <div class="container">
     <div class="tabs">
-      <div class="tab active" onclick="switchTab('brickbugs')">BRICKBUGS</div>
-      <div class="tab" onclick="switchTab('help')">Help Center</div>
-      <div class="tab" onclick="switchTab('fun')">Fun</div>
+      <button onclick="switchSection('BrickBugs')">BrickBugs</button>
+      <button onclick="switchSection('Help Center')">Help Center</button>
+      <button onclick="switchSection('Fun')">Fun</button>
     </div>
 
-    <div>
-      <h2>Create a Subforum Post</h2>
-      <input type="text" id="subforum-title" placeholder="Subforum Title" />
-      <textarea id="post-content" rows="4" placeholder="Write something..."></textarea>
-      <button onclick="submitPost()">Post</button>
-    </div>
+    <select id="subforum-select"></select>
+    <input type="text" id="new-subforum" placeholder="New subforum name..." />
+    <button onclick="createSubforum()">Create Subforum</button>
 
-    <h3>Subforums</h3>
+    <h2>Post a Message</h2>
+    <textarea id="post-content" rows="4" placeholder="Write something..."></textarea>
+    <button onclick="submitPost()">Post</button>
+
+    <h3>All Posts</h3>
     <div id="posts"></div>
   </div>
 
@@ -91,8 +87,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, collection, addDoc, query,
-      where, orderBy, getDocs, serverTimestamp
+      getFirestore, collection, addDoc, query, where,
+      orderBy, getDocs, serverTimestamp, doc, updateDoc, arrayUnion
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -109,78 +105,111 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentUserData = null;
-    let currentTab = 'brickbugs';
+    let currentUser = null;
+    let currentSection = "BrickBugs";
+
+    const subforumSelect = document.getElementById("subforum-select");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "index.html";
         return;
       }
-
-      const usersSnap = await getDocs(query(collection(db, "users")));
-      usersSnap.forEach(doc => {
-        if (doc.id === user.uid) {
-          currentUserData = doc.data();
-        }
-      });
-
-      loadPosts();
+      currentUser = user;
+      await loadSubforums();
+      await loadPosts();
     });
 
-    async function submitPost() {
-      const title = document.getElementById("subforum-title").value.trim();
-      const content = document.getElementById("post-content").value.trim();
-      if (!title || !content) return alert("Please fill out all fields.");
+    async function loadSubforums() {
+      const snapshot = await getDocs(query(collection(db, "subforums"), where("section", "==", currentSection)));
+      subforumSelect.innerHTML = "";
+      snapshot.forEach(doc => {
+        const option = document.createElement("option");
+        option.value = doc.id;
+        option.textContent = doc.data().name;
+        subforumSelect.appendChild(option);
+      });
+    }
 
-      try {
-        await addDoc(collection(db, "posts"), {
-          section: currentTab,
-          title,
-          content,
-          author: currentUserData?.username || "Unknown",
-          timestamp: serverTimestamp()
-        });
-        document.getElementById("post-content").value = "";
-        document.getElementById("subforum-title").value = "";
-        loadPosts();
-      } catch (err) {
-        console.error("Error posting:", err);
-      }
+    async function createSubforum() {
+      const name = document.getElementById("new-subforum").value.trim();
+      if (!name) return alert("Subforum name required.");
+      await addDoc(collection(db, "subforums"), {
+        name,
+        section: currentSection,
+        createdAt: serverTimestamp()
+      });
+      document.getElementById("new-subforum").value = "";
+      await loadSubforums();
+    }
+
+    async function submitPost() {
+      const content = document.getElementById("post-content").value.trim();
+      const subforumId = subforumSelect.value;
+      if (!content || !subforumId) return alert("Content and subforum are required.");
+      await addDoc(collection(db, "posts"), {
+        content,
+        author: currentUser.email,
+        timestamp: serverTimestamp(),
+        section: currentSection,
+        subforum: subforumId,
+        replies: []
+      });
+      document.getElementById("post-content").value = "";
+      await loadPosts();
     }
 
     async function loadPosts() {
       const postsContainer = document.getElementById("posts");
       postsContainer.innerHTML = "";
-
+      const subforumId = subforumSelect.value;
       const q = query(
         collection(db, "posts"),
-        where("section", "==", currentTab),
+        where("section", "==", currentSection),
+        where("subforum", "==", subforumId),
         orderBy("timestamp", "desc")
       );
 
-      const querySnapshot = await getDocs(q);
-      querySnapshot.forEach(doc => {
-        const data = doc.data();
+      const snapshot = await getDocs(q);
+      snapshot.forEach(docSnap => {
+        const post = docSnap.data();
         const div = document.createElement("div");
         div.className = "post";
         div.innerHTML = `
-          <h4>${data.title}</h4>
-          <p>${data.content}</p>
-          <small>Posted by ${data.author || "Unknown"} on ${data.timestamp?.toDate().toLocaleString() || "..."}</small>
+          <p>${post.content}</p>
+          <small>Posted by ${post.author} on ${post.timestamp?.toDate().toLocaleString() || "..."}</small>
+          <textarea placeholder="Write a reply..." rows="2" id="reply-${docSnap.id}"></textarea>
+          <button onclick="submitReply('${docSnap.id}')">Reply</button>
+          <div class="replies">
+            ${(post.replies || []).map(reply =>
+              `<div class="reply"><p>${reply.text}</p><small>— ${reply.author}</small></div>`).join("")
+            }
+          </div>
         `;
         postsContainer.appendChild(div);
       });
     }
 
-    window.switchTab = function(tab) {
-      currentTab = tab;
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelector(`.tab:nth-child(${tab === 'brickbugs' ? 1 : tab === 'help' ? 2 : 3})`).classList.add('active');
-      loadPosts();
+    async function submitReply(postId) {
+      const replyBox = document.getElementById(`reply-${postId}`);
+      const text = replyBox.value.trim();
+      if (!text) return;
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
+        replies: arrayUnion({ text, author: currentUser.email, timestamp: Date.now() })
+      });
+      replyBox.value = "";
+      await loadPosts();
+    }
+
+    window.switchSection = async function(section) {
+      currentSection = section;
+      await loadSubforums();
+      await loadPosts();
     };
 
     window.submitPost = submitPost;
+    window.submitReply = submitReply;
   </script>
 </body>
 </html>
