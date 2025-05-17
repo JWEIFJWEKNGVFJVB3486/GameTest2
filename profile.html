@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Profile</title>
+  <style>
+    body { font-family: Arial; background: #f0f8ff; padding: 20px; text-align: center; }
+    .profile-box {
+      background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: inline-block; text-align: left;
+    }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 8px; }
+    .like-btn { background: #ff69b4; color: white; }
+    .dislike-btn { background: #8b0000; color: white; }
+    .back-btn { background: #007bff; color: white; }
+  </style>
+</head>
+<body>
+  <div class="profile-box">
+    <h2 id="username">Loading...</h2>
+    <p>Gender: <span id="gender">...</span></p>
+    <p>Ladybugs (Likes): <span id="likes">0</span></p>
+    <p>Stink Bugs (Dislikes): <span id="dislikes">0</span></p>
+    <p><strong>Termipoints:</strong> <span id="reputation">0</span></p>
+
+    <button class="like-btn" onclick="likeProfile()">🐞 Like</button>
+    <button class="dislike-btn" onclick="dislikeProfile()">🪳 Dislike</button>
+    <br>
+    <button class="back-btn" onclick="window.location.href='home.html'">Back to Dashboard</button>
+  </div>
+
+  <!-- Firebase Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Change this to the target user's UID (you can pass it via query param or select from a list)
+    const viewedUserId = new URLSearchParams(window.location.search).get("uid");
+
+    if (!viewedUserId) {
+      alert("No profile ID provided.");
+      window.location.href = "home.html";
+    }
+
+    let userRef = doc(db, "users", viewedUserId);
+
+    async function loadProfile() {
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        document.getElementById("username").textContent = data.username || "Unnamed User";
+        document.getElementById("gender").textContent = data.gender || "Unknown";
+        document.getElementById("likes").textContent = data.likes || 0;
+        document.getElementById("dislikes").textContent = data.dislikes || 0;
+        document.getElementById("reputation").textContent = (data.likes || 0) - (data.dislikes || 0);
+      } else {
+        alert("Profile not found.");
+        window.location.href = "home.html";
+      }
+    }
+
+    async function likeProfile() {
+      await updateDoc(userRef, { likes: increment(1) });
+      loadProfile();
+    }
+
+    async function dislikeProfile() {
+      await updateDoc(userRef, { dislikes: increment(1) });
+      loadProfile();
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>
