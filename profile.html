@@ -91,12 +91,12 @@
 
       document.getElementById("profileData").innerHTML = `
         <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
-        <p>💰 Cube Bucks: ${data.cubeBucks || 0}</p>
-        <p>🐞 Ladybugs: ${likes} | 💩 Stink Bugs: ${dislikes}</p>
-        <p><strong>🔥 Termipoints:</strong> ${termipoints}</p>
+        <p>Cube Bucks: ${data.cubeBucks || 0}</p>
+        <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
+        <p><strong>Termipoints:</strong> ${termipoints}</p>
 
-        <button class="like-btn" ${userHasLiked ? "disabled" : ""} onclick="likeUser('${uid}')">🐞 Like</button>
-        <button class="dislike-btn" ${userHasDisliked ? "disabled" : ""} onclick="dislikeUser('${uid}')">💩 Dislike</button>
+        <button class="like-btn" ${userHasLiked ? "disabled" : ""} onclick="likeUser('${uid}')">Like</button>
+        <button class="dislike-btn" ${userHasDisliked ? "disabled" : ""} onclick="dislikeUser('${uid}')">Dislike</button>
       `;
     }
 
