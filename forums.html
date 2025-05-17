@@ -1,85 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>BrickBugs – Forums</title>
-<style>
- body{font-family:Arial;background:#f0f0f0;margin:0;}
- .navbar{background:#007bff;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
- .navbar a{color:#fff;text-decoration:none;margin-left:15px;}
- .content{padding:20px;}
- textarea{width:100%;min-height:60px;padding:10px;margin-bottom:10px;}
- button{background:#28a745;color:#fff;border:none;padding:8px 14px;border-radius:5px;cursor:pointer;}
- .post{background:#fff;padding:10px;border-radius:5px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,.1);}
-</style>
+  <meta charset="UTF-8" />
+  <title>Forums - BrickBugs</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f8ff; margin: 0; padding: 0; }
+    .navbar {
+      background: #007bff; color: white;
+      padding: 10px 20px; display: flex; justify-content: space-between;
+      align-items: center;
+    }
+    .logo { font-weight: bold; font-size: 1.5em; }
+    .container { padding: 20px; }
+    textarea, button { width: 100%; margin-top: 10px; padding: 10px; }
+    .post { background: white; padding: 10px; margin-top: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .post small { color: gray; }
+  </style>
 </head>
 <body>
-<div class="navbar">
-  <div class="logo">BrickBugs</div>
-  <div>
-    <a href="home.html">🏠 Home</a>
-    <a href="forums.html">🗨️ Forums</a>
+  <div class="navbar">
+    <div class="logo">BrickBugs Forums</div>
+    <div><button onclick="window.location.href='home.html'">🏠 Home</button></div>
   </div>
-</div>
 
-<div class="content">
-  <h2>🗨️ Community Forums</h2>
-  <textarea id="post-content" placeholder="What's on your mind?"></textarea>
-  <button onclick="submitPost()">Post</button>
-  <div id="post-list"></div>
-</div>
+  <div class="container">
+    <h2>Post a Message</h2>
+    <textarea id="post-content" rows="4" placeholder="Write something..."></textarea>
+    <button onclick="submitPost()">Post</button>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore, collection, addDoc,
-  query, orderBy, onSnapshot, serverTimestamp, doc, getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    <h3>All Posts</h3>
+    <div id="posts"></div>
+  </div>
 
-const firebaseConfig = { /* …same config… */ };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+  <!-- Firebase Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentUser = null, currentUsername = "";
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
+    };
 
-onAuthStateChanged(auth, async user=>{
-  if(!user){ location.href="index.html"; return; }
-  currentUser = user;
-  const snap  = await getDoc(doc(db,"users",user.uid));
-  currentUsername = snap.data().username;
-  loadPosts();
-});
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-window.submitPost = async ()=>{
-  const content = document.getElementById("post-content").value.trim();
-  if(!content) return alert("Post cannot be empty.");
-  await addDoc(collection(db,"forumPosts"),{
-    uid: currentUser.uid,
-    username: currentUsername,
-    content,
-    timestamp: serverTimestamp()
-  });
-  document.getElementById("post-content").value="";
-};
+    let currentUserData = null;
 
-function loadPosts(){
-  const list = document.getElementById("post-list");
-  const q = query(collection(db,"forumPosts"),orderBy("timestamp","desc"));
-  onSnapshot(q,snap=>{
-    list.innerHTML="";
-    snap.forEach(docSnap=>{
-      const p=docSnap.data();
-      const div=document.createElement("div");
-      div.className="post";
-      div.innerHTML=`<strong>${p.username}</strong><br>
-                     <p>${p.content}</p>
-                     <small>${p.timestamp?.toDate().toLocaleString()||"Just now"}</small>`;
-      list.appendChild(div);
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      const userDoc = await getDocs(query(collection(db, "users")));
+      userDoc.forEach(doc => {
+        if (doc.id === user.uid) {
+          currentUserData = doc.data();
+        }
+      });
+
+      loadPosts();
     });
-  });
-}
-</script>
+
+    async function submitPost() {
+      const content = document.getElementById("post-content").value.trim();
+      if (!content) return alert("Post cannot be empty.");
+
+      try {
+        await addDoc(collection(db, "posts"), {
+          content,
+          author: currentUserData?.username || "Unknown",
+          timestamp: serverTimestamp()
+        });
+        document.getElementById("post-content").value = "";
+        loadPosts();
+      } catch (err) {
+        console.error("Error posting:", err);
+      }
+    }
+
+    async function loadPosts() {
+      const postsContainer = document.getElementById("posts");
+      postsContainer.innerHTML = "";
+
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      const querySnapshot = await getDocs(q);
+
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `
+          <p>${data.content}</p>
+          <small>Posted by ${data.author || "Unknown"} on ${data.timestamp?.toDate().toLocaleString() || "..."}</small>
+        `;
+        postsContainer.appendChild(div);
+      });
+    }
+
+    window.submitPost = submitPost;
+  </script>
 </body>
 </html>
