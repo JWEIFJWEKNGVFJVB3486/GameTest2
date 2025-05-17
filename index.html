@@ -73,7 +73,7 @@ async function signup() {
       username, email, gender, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     msg.textContent = "Account created! Redirecting…"; msg.style.color="green";
-    setTimeout(()=>location.href="dashboard.html",1500);
+    setTimeout(()=>location.href="HOME.html",1500);
   } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
 }
 
@@ -93,7 +93,7 @@ async function login() {
     /* 2️⃣ Sign‑in with the underlying email */
     await auth.signInWithEmailAndPassword(userDoc.email,password);
     msg.textContent="Login successful! Redirecting…"; msg.style.color="green";
-    setTimeout(()=>location.href="dashboard.html",1500);
+    setTimeout(()=>location.href="HOME.html",1500);
   } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
 }
 </script>
