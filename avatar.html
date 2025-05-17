@@ -43,8 +43,8 @@
       width: 120px;
       pointer-events: none;
       user-select: none;
-      border: none !important; /* important to override any borders */
-      box-shadow: none !important; /* remove any shadow outlines */
+      border: none !important;
+      box-shadow: none !important;
       transition: filter 0.3s ease;
     }
 
@@ -107,7 +107,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -123,49 +123,21 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-let shopItems = [];
-
-async function loadShopItems() {
-  const shopItemsCol = collection(db, "shopItems");
-  const shopSnapshot = await getDocs(shopItemsCol);
-  shopItems = shopSnapshot.docs.map(doc => {
-    // Expect doc data to have fields: id, name, img
-    return doc.data();
-  });
-}
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return window.location.href = "index.html";
-  currentUserUid = user.uid;
-  await loadUserData();
-  await loadShopItems(); // <-- dynamically load hats here
-  setupUI();
-});
-
-
+    let shopItems = [];
     let currentUserUid = null;
     let userData = null;
 
-    const avatarCube = document.getElementById("avatar-cube");
-    const equippedHatImg = document.getElementById("equipped-hat");
-    const ownedHatsContainer = document.getElementById("owned-hats-container");
-    const colorPicker = document.getElementById("color-picker");
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      currentUserUid = user.uid;
-      await loadUserData();
-      setupUI();
-    });
+    async function loadShopItems() {
+      const shopItemsCol = collection(db, "shopItems");
+      const shopSnapshot = await getDocs(shopItemsCol);
+      shopItems = shopSnapshot.docs.map(doc => doc.data());
+    }
 
     async function loadUserData() {
       const userRef = doc(db, "users", currentUserUid);
       const docSnap = await getDoc(userRef);
       if (docSnap.exists()) {
         userData = docSnap.data();
-        // Set defaults if missing
         if (!userData.avatarColor) userData.avatarColor = "#3498db";
         if (!userData.equippedHat) userData.equippedHat = "";
         if (!userData.hats) userData.hats = [];
@@ -174,18 +146,28 @@ onAuthStateChanged(auth, async (user) => {
       }
     }
 
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+      currentUserUid = user.uid;
+
+      // Load shop items and user data first
+      await loadShopItems();
+      await loadUserData();
+
+      setupUI();
+    });
+
+    const avatarCube = document.getElementById("avatar-cube");
+    const equippedHatImg = document.getElementById("equipped-hat");
+    const ownedHatsContainer = document.getElementById("owned-hats-container");
+    const colorPicker = document.getElementById("color-picker");
+
     function setupUI() {
-      // Set cube color and picker value
       avatarCube.style.backgroundColor = userData.avatarColor;
       colorPicker.value = userData.avatarColor;
-
-      // Set equipped hat image or hide
       updateEquippedHat();
-
-      // Show owned hats
       renderOwnedHats();
 
-      // Setup color picker event - allow full color range (including shades)
       colorPicker.oninput = async (e) => {
         const newColor = e.target.value;
         avatarCube.style.backgroundColor = newColor;
@@ -201,7 +183,6 @@ onAuthStateChanged(auth, async (user) => {
           equippedHatImg.src = hatInfo.img;
           equippedHatImg.alt = hatInfo.name;
           equippedHatImg.style.display = "block";
-          // Remove any green outline from equipped hat on cube
           equippedHatImg.classList.remove("equipped");
           return;
         }
@@ -221,7 +202,6 @@ onAuthStateChanged(auth, async (user) => {
         hatImg.src = hatInfo.img;
         hatImg.alt = hatInfo.name;
 
-        // Highlight equipped hat border in owned hats container only
         if (userData.equippedHat === hatId) {
           hatImg.classList.add("equipped");
         } else {
