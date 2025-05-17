@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BrickBugs Profile Viewer</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f0f8ff; margin: 0; padding: 20px; }
@@ -18,6 +18,7 @@
     }
     .like-btn { background: #4caf50; color: white; }
     .dislike-btn { background: #f44336; color: white; }
+    .home-btn { background: #2196f3; color: white; margin-bottom: 10px; }
     input[type="text"] {
       padding: 8px; width: 80%; border: 1px solid #ccc;
       border-radius: 5px; margin-top: 10px;
@@ -27,6 +28,7 @@
 <body>
 
   <div class="profile-box">
+    <button class="home-btn" onclick="goHome()">🏠 Home</button>
     <h2>Search Profile</h2>
     <input type="text" id="usernameInput" placeholder="Enter username..." />
     <button onclick="searchByUsername()">Search</button>
@@ -37,7 +39,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -54,6 +56,8 @@
     const db = getFirestore(app);
 
     let currentUserUid = null;
+    let currentProfileUid = null;
+    let currentProfileData = null;
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -62,6 +66,10 @@
         window.location.href = "index.html";
       }
     });
+
+    window.goHome = function () {
+      window.location.href = "home.html";
+    };
 
     window.searchByUsername = async function () {
       const username = document.getElementById("usernameInput").value.trim();
@@ -77,11 +85,15 @@
       }
 
       const docSnap = snapshot.docs[0];
-      const uid = docSnap.id;
-      loadProfile(uid, docSnap.data());
+      currentProfileUid = docSnap.id;
+      currentProfileData = docSnap.data();
+
+      loadProfile();
     };
 
-    async function loadProfile(uid, data) {
+    async function loadProfile() {
+      const data = currentProfileData;
+      const uid = currentProfileUid;
       const likes = data.likes || 0;
       const dislikes = data.dislikes || 0;
       const termipoints = likes - dislikes;
@@ -95,35 +107,53 @@
         <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
         <p><strong>Termipoints:</strong> ${termipoints}</p>
 
-        <button class="like-btn" ${userHasLiked ? "disabled" : ""} onclick="likeUser('${uid}')">Like</button>
-        <button class="dislike-btn" ${userHasDisliked ? "disabled" : ""} onclick="dislikeUser('${uid}')">Dislike</button>
+        <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? 'Undo Like' : 'Like'}</button>
+        <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? 'Undo Dislike' : 'Dislike'}</button>
       `;
     }
 
-    window.likeUser = async function (uid) {
+    window.toggleLike = async function (uid) {
       const ref = doc(db, "users", uid);
       const snap = await getDoc(ref);
       const data = snap.data();
-      if ((data.likedBy || []).includes(currentUserUid)) return;
+      const likedBy = data.likedBy || [];
+      const hasLiked = likedBy.includes(currentUserUid);
 
       await updateDoc(ref, {
-        likes: (data.likes || 0) + 1,
-        likedBy: arrayUnion(currentUserUid)
+        likes: hasLiked ? (data.likes || 0) - 1 : (data.likes || 0) + 1,
+        likedBy: hasLiked ? arrayRemove(currentUserUid) : arrayUnion(currentUserUid)
       });
-      loadProfile(uid, { ...data, likes: (data.likes || 0) + 1, likedBy: [...(data.likedBy || []), currentUserUid] });
+
+      currentProfileData = {
+        ...data,
+        likes: hasLiked ? (data.likes || 0) - 1 : (data.likes || 0) + 1,
+        likedBy: hasLiked
+          ? likedBy.filter(id => id !== currentUserUid)
+          : [...likedBy, currentUserUid]
+      };
+      loadProfile();
     };
 
-    window.dislikeUser = async function (uid) {
+    window.toggleDislike = async function (uid) {
       const ref = doc(db, "users", uid);
       const snap = await getDoc(ref);
       const data = snap.data();
-      if ((data.dislikedBy || []).includes(currentUserUid)) return;
+      const dislikedBy = data.dislikedBy || [];
+      const hasDisliked = dislikedBy.includes(currentUserUid);
 
       await updateDoc(ref, {
-        dislikes: (data.dislikes || 0) + 1,
-        dislikedBy: arrayUnion(currentUserUid)
+        dislikes: hasDisliked ? (data.dislikes || 0) - 1 : (data.dislikes || 0) + 1,
+        dislikedBy: hasDisliked ? arrayRemove(currentUserUid) : arrayUnion(currentUserUid)
       });
-      loadProfile(uid, { ...data, dislikes: (data.dislikes || 0) + 1, dislikedBy: [...(data.dislikedBy || []), currentUserUid] });
+
+      currentProfileData = {
+        ...data,
+        dislikes: hasDisliked ? (data.dislikes || 0) - 1 : (data.dislikes || 0) + 1,
+        dislikedBy: hasDisliked
+          ? dislikedBy.filter(id => id !== currentUserUid)
+          : [...dislikedBy, currentUserUid]
+      };
+      loadProfile();
     };
   </script>
 </body>
