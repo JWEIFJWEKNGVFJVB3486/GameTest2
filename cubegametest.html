@@ -1,50 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Multiplayer Game with Leaderboard</title>
+  <title>Cube Multiplayer</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
     }
     canvas {
-      background: #e0f7fa;
-      display: block;
+      background: #eef;
     }
     #leaderboard {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(255,255,255,0.8);
+      background: white;
       padding: 10px;
-      border-radius: 10px;
-      min-width: 150px;
-    }
-    #leaderboard h3 {
-      margin: 0 0 5px;
-      font-size: 16px;
-    }
-    #leaderboard ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #leaderboard li {
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
       font-size: 14px;
-      margin-bottom: 2px;
     }
   </style>
 </head>
 <body>
   <canvas id="game" width="800" height="600"></canvas>
-  <div id="leaderboard">
-    <h3>Leaderboard</h3>
-    <ul id="leaderboardList"></ul>
-  </div>
+  <div id="leaderboard"><strong>Leaderboard</strong><br><ul id="board"></ul></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getDatabase, ref, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
@@ -59,82 +45,83 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const rtdb = getDatabase(app);
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
-    const leaderboardList = document.getElementById("leaderboardList");
+    const board = document.getElementById("board");
 
-    const username = prompt("Enter your username:");
-    const playerId = "player_" + Math.random().toString(36).substring(2, 9);
-    const playerRef = ref(db, `players/${playerId}`);
-    const playersRef = ref(db, "players");
-
+    let player = null;
+    let playerRef = null;
     let players = {};
-
-    let player = {
-      username: username || "Guest",
-      x: Math.random() * 700 + 50,
-      y: Math.random() * 500 + 50,
-      color: "#" + Math.floor(Math.random() * 16777215).toString(16),
-      score: 0
-    };
-
-    set(playerRef, player);
-    onDisconnect(playerRef).remove();
-
-    // Movement
-    const keys = {};
-    window.addEventListener("keydown", e => keys[e.key] = true);
-    window.addEventListener("keyup", e => keys[e.key] = false);
-
-    function update() {
-      if (keys["w"]) player.y -= 2;
-      if (keys["s"]) player.y += 2;
-      if (keys["a"]) player.x -= 2;
-      if (keys["d"]) player.x += 2;
-
-      // Dummy scoring: increase score while moving
-      if (keys["w"] || keys["a"] || keys["s"] || keys["d"]) {
-        player.score += 1;
-      }
-
-      set(playerRef, player);
-    }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let id in players) {
-        const p = players[id];
-        ctx.fillStyle = p.color;
+      for (const uid in players) {
+        const p = players[uid];
+        ctx.fillStyle = p.color || "#000";
         ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
         ctx.fillStyle = "black";
-        ctx.fillText(p.username, p.x - 10, p.y - 15);
+        ctx.fillText(p.username || "?", p.x - 10, p.y - 15);
       }
     }
 
     function updateLeaderboard() {
       const sorted = Object.values(players).sort((a, b) => b.score - a.score);
-      leaderboardList.innerHTML = "";
-      sorted.forEach(p => {
+      board.innerHTML = "";
+      for (const p of sorted) {
         const li = document.createElement("li");
-        li.textContent = `${p.username}: ${p.score}`;
-        leaderboardList.appendChild(li);
-      });
+        li.textContent = `${p.username || "?"}: ${p.score || 0}`;
+        board.appendChild(li);
+      }
     }
 
-    function gameLoop() {
-      update();
+    function loop() {
+      if (!player) return;
+      if (keys["w"]) player.y -= 2;
+      if (keys["s"]) player.y += 2;
+      if (keys["a"]) player.x -= 2;
+      if (keys["d"]) player.x += 2;
+      if (keys["w"] || keys["a"] || keys["s"] || keys["d"]) {
+        player.score += 1;
+      }
+      set(playerRef, player);
       draw();
       updateLeaderboard();
-      requestAnimationFrame(gameLoop);
+      requestAnimationFrame(loop);
     }
 
-    onValue(playersRef, snapshot => {
-      players = snapshot.val() || {};
-    });
+    const keys = {};
+    window.addEventListener("keydown", e => keys[e.key] = true);
+    window.addEventListener("keyup", e => keys[e.key] = false);
 
-    gameLoop();
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return (window.location.href = "index.html");
+
+      const uid = user.uid;
+      const userDoc = await getDoc(doc(db, "users", uid));
+      const data = userDoc.exists() ? userDoc.data() : { username: "Unknown" };
+
+      player = {
+        username: data.username || "Unnamed",
+        x: Math.random() * 700 + 50,
+        y: Math.random() * 500 + 50,
+        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+        score: 0
+      };
+
+      playerRef = ref(rtdb, `players/${uid}`);
+      set(playerRef, player);
+      onDisconnect(playerRef).remove();
+
+      onValue(ref(rtdb, "players"), snapshot => {
+        players = snapshot.val() || {};
+      });
+
+      loop();
+    });
   </script>
 </body>
 </html>
