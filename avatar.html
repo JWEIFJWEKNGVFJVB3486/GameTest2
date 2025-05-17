@@ -176,20 +176,21 @@
   }
 
   function updateEquippedHat() {
-    if (userData.equippedHat) {
-      const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
-      if (hatInfo) {
-        equippedHatImg.src = hatInfo.img;
-        equippedHatImg.alt = hatInfo.name;
-        equippedHatImg.style.display = "block";
-        equippedHatImg.classList.remove("equipped");
-        return;
-      }
+  if (userData.equippedHat) {
+    const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
+    if (hatInfo && hatInfo.img) {
+      equippedHatImg.src = hatInfo.img;
+      equippedHatImg.alt = hatInfo.name || "Equipped Hat";
+      equippedHatImg.style.display = "block";
+      equippedHatImg.classList.remove("equipped");
+      return;
     }
-    equippedHatImg.style.display = "none";
-    equippedHatImg.src = "";
-    equippedHatImg.alt = "";
   }
+  equippedHatImg.style.display = "none";
+  equippedHatImg.src = "";
+  equippedHatImg.alt = "";
+}
+
 
   function renderOwnedHats() {
     ownedHatsContainer.innerHTML = "";
