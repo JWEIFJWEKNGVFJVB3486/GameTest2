@@ -34,7 +34,6 @@
       transition: background-color 0.3s ease;
     }
 
-    /* Remove green outline from equipped hat on cube */
     #equipped-hat {
       position: absolute;
       top: -40px;
@@ -128,7 +127,7 @@
   let userData = null;
 
   async function loadHatItems() {
-    const hatsCol = collection(db, "hats"); 
+    const hatsCol = collection(db, "hats");
     const hatSnapshot = await getDocs(hatsCol);
     hatItems = hatSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
@@ -176,21 +175,20 @@
   }
 
   function updateEquippedHat() {
-  if (userData.equippedHat) {
-    const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
-    if (hatInfo && hatInfo.img) {
-      equippedHatImg.src = hatInfo.img;
-      equippedHatImg.alt = hatInfo.name || "Equipped Hat";
-      equippedHatImg.style.display = "block";
-      equippedHatImg.classList.remove("equipped");
-      return;
+    if (userData.equippedHat) {
+      const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
+      if (hatInfo && hatInfo.imageUrl) {
+        equippedHatImg.src = hatInfo.imageUrl;
+        equippedHatImg.alt = hatInfo.name || "Equipped Hat";
+        equippedHatImg.style.display = "block";
+        equippedHatImg.classList.remove("equipped");
+        return;
+      }
     }
+    equippedHatImg.style.display = "none";
+    equippedHatImg.src = "";
+    equippedHatImg.alt = "";
   }
-  equippedHatImg.style.display = "none";
-  equippedHatImg.src = "";
-  equippedHatImg.alt = "";
-}
-
 
   function renderOwnedHats() {
     ownedHatsContainer.innerHTML = "";
@@ -204,7 +202,7 @@
       if (!hatInfo) return;
 
       const hatImg = document.createElement("img");
-      hatImg.src = hatInfo.img;
+      hatImg.src = hatInfo.imageUrl;
       hatImg.alt = hatInfo.name;
 
       if (userData.equippedHat === hatId) {
@@ -225,7 +223,6 @@
       ownedHatsContainer.appendChild(hatImg);
     });
   }
-</script>
-
+  </script>
 </body>
 </html>
