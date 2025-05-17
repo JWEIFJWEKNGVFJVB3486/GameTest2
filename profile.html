@@ -27,9 +27,9 @@
 <body>
 
   <div class="profile-box">
-    <h2>View Profile</h2>
-    <input type="text" id="uidInput" placeholder="Enter user UID..." />
-    <button onclick="loadProfile()">Search</button>
+    <h2>Search Profile</h2>
+    <input type="text" id="usernameInput" placeholder="Enter username..." />
+    <button onclick="searchByUsername()">Search</button>
 
     <div id="profileData" style="margin-top: 20px;"></div>
   </div>
@@ -37,7 +37,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -58,30 +58,30 @@
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUserUid = user.uid;
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUid = urlParams.get("uid");
-        if (targetUid) {
-          document.getElementById("uidInput").value = targetUid;
-          loadProfile(targetUid);
-        }
       } else {
         window.location.href = "index.html";
       }
     });
 
-    window.loadProfile = async function (providedUid = null) {
-      const uid = providedUid || document.getElementById("uidInput").value.trim();
-      if (!uid) return alert("Enter a UID");
+    window.searchByUsername = async function () {
+      const username = document.getElementById("usernameInput").value.trim();
+      if (!username) return alert("Enter a username");
 
-      const ref = doc(db, "users", uid);
-      const snap = await getDoc(ref);
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username));
+      const snapshot = await getDocs(q);
 
-      if (!snap.exists()) {
+      if (snapshot.empty) {
         document.getElementById("profileData").innerHTML = "User not found.";
         return;
       }
 
-      const data = snap.data();
+      const docSnap = snapshot.docs[0];
+      const uid = docSnap.id;
+      loadProfile(uid, docSnap.data());
+    };
+
+    async function loadProfile(uid, data) {
       const likes = data.likes || 0;
       const dislikes = data.dislikes || 0;
       const termipoints = likes - dislikes;
@@ -98,7 +98,7 @@
         <button class="like-btn" ${userHasLiked ? "disabled" : ""} onclick="likeUser('${uid}')">🐞 Like</button>
         <button class="dislike-btn" ${userHasDisliked ? "disabled" : ""} onclick="dislikeUser('${uid}')">💩 Dislike</button>
       `;
-    };
+    }
 
     window.likeUser = async function (uid) {
       const ref = doc(db, "users", uid);
@@ -110,7 +110,7 @@
         likes: (data.likes || 0) + 1,
         likedBy: arrayUnion(currentUserUid)
       });
-      loadProfile(uid);
+      loadProfile(uid, { ...data, likes: (data.likes || 0) + 1, likedBy: [...(data.likedBy || []), currentUserUid] });
     };
 
     window.dislikeUser = async function (uid) {
@@ -123,7 +123,7 @@
         dislikes: (data.dislikes || 0) + 1,
         dislikedBy: arrayUnion(currentUserUid)
       });
-      loadProfile(uid);
+      loadProfile(uid, { ...data, dislikes: (data.dislikes || 0) + 1, dislikedBy: [...(data.dislikedBy || []), currentUserUid] });
     };
   </script>
 </body>
