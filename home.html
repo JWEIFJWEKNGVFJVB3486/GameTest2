@@ -1,72 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>BrickBugs – Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BrickBugs Dashboard</title>
   <style>
-    body{margin:0;font-family:Arial;background:#e3f2fd;}
-    .navbar{background:#007bff;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
-    .logo{font-weight:bold;font-size:1.5em;}
-    .nav-links a{color:#fff;text-decoration:none;margin-left:15px;}
-    .user-info{display:flex;align-items:center;gap:10px;}
-    .content{padding:20px;}
-    button{background:#4caf50;color:#fff;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;}
+    body { margin: 0; font-family: Arial, sans-serif; background: #e3f2fd; }
+    .navbar {
+      background: #007bff; color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .logo { font-weight: bold; font-size: 1.5em; }
+    .user-info { font-size: 1em; display: flex; align-items: center; gap: 10px; }
+    .content { padding: 20px; }
+    button { background: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 5px; }
+    #earn-btn { background: #4caf50; color: white; margin-top: 10px; }
   </style>
 </head>
 <body>
-<div class="navbar">
-  <div class="logo">BrickBugs</div>
-  <div class="nav-links">
-    <a href="home.html">🏠 Home</a>
-    <a href="forums.html">🗨️ Forums</a>
+  <div class="navbar">
+    <div class="logo">BrickBugs</div>
+    <div class="user-info" id="user-info">Loading...</div>
   </div>
-  <div id="user-info" class="user-info">Loading…</div>
-</div>
 
-<div class="content">
-  <h2>Welcome to BrickBugs!</h2>
-  <p>This is your account dashboard.</p>
-  <button id="earn-btn" onclick="earnCubeBucks()">💸 Get Cube Bucks</button><br><br>
-  <button onclick="location.href='cubegametest.html'">🟦 Play Cube Sandbox</button>
-</div>
+  <div class="content">
+    <h2>Welcome to BrickBugs!</h2>
+    <p>This is your account dashboard.</p>
+    <button id="earn-btn" onclick="earnCubeBucks()">💸 Get Cube Bucks</button><br><br>
+    <button onclick="window.location.href='cubegametest.html'">🟦 Play Cube Sandbox</button>
+    <button onclick="window.location.href='forums.html'">💬 Forums</button>
+  </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <!-- Firebase Modular SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = { /* …same config… */ };
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
+    };
 
-let uid = null;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-onAuthStateChanged(auth, async user=>{
-  const info = document.getElementById("user-info");
-  if(!user){ location.href="index.html"; return; }
-  uid = user.uid;
-  const snap = await getDoc(doc(db,"users",uid));
-  const data = snap.data();
-  if(data.cubeBucks===undefined){ await setDoc(doc(db,"users",uid),{cubeBucks:0},{merge:true}); data.cubeBucks=0; }
+    let currentUserUid = null;
 
-  info.innerHTML = `
-    👤 <strong>${data.username}</strong> |
-    💰 Cube Bucks: <span id="cube">${data.cubeBucks}</span>
-    <button onclick="logout()">Logout</button>
-  `;
-});
+    onAuthStateChanged(auth, async (user) => {
+      const userInfo = document.getElementById("user-info");
+      if (user) {
+        currentUserUid = user.uid;
+        const userRef = doc(db, "users", user.uid);
+        try {
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.cubeBucks === undefined) {
+              await setDoc(userRef, { cubeBucks: 0 }, { merge: true });
+              data.cubeBucks = 0;
+            }
 
-window.logout = ()=>signOut(auth);
-window.earnCubeBucks = async ()=>{
-  if(!uid) return;
-  const ref = doc(db,"users",uid);
-  const snap = await getDoc(ref);
-  const val  = (snap.data().cubeBucks||0)+10;
-  await updateDoc(ref,{cubeBucks:val});
-  document.getElementById("cube").textContent = val;
-};
-</script>
+            userInfo.innerHTML = `
+              👤 ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
+              💰 Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
+              <button onclick="logout()">Logout</button>
+            `;
+          } else {
+            userInfo.textContent = "User data not found.";
+          }
+        } catch (err) {
+          console.error("Error getting user data:", err);
+          userInfo.textContent = "Error loading data.";
+        }
+      } else {
+        window.location.href = "index.html";
+      }
+    });
+
+    window.logout = function () {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      }).catch(error => {
+        console.error("Logout error:", error);
+      });
+    };
+
+    window.earnCubeBucks = async function () {
+      if (!currentUserUid) return;
+      const userRef = doc(db, "users", currentUserUid);
+      try {
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+          const current = docSnap.data().cubeBucks || 0;
+          const updated = current + 10;
+          await updateDoc(userRef, { cubeBucks: updated });
+          document.getElementById("cube-bucks").textContent = updated;
+        }
+      } catch (err) {
+        console.error("Error updating Cube Bucks:", err);
+      }
+    };
+  </script>
 </body>
 </html>
