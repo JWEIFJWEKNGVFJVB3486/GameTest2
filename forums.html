@@ -4,17 +4,63 @@
   <meta charset="UTF-8" />
   <title>Forums - BrickBugs</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f0f8ff; margin: 0; padding: 0; }
-    .navbar {
-      background: #007bff; color: white;
-      padding: 10px 20px; display: flex; justify-content: space-between;
-      align-items: center;
+    body {
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      background: #d9f5c8;
+      margin: 0;
+      padding: 0;
     }
-    .logo { font-weight: bold; font-size: 1.5em; }
-    .container { padding: 20px; }
-    textarea, button { width: 100%; margin-top: 10px; padding: 10px; }
-    .post { background: white; padding: 10px; margin-top: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .post small { color: gray; }
+    .navbar {
+      background: #4CAF50;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.5em;
+      border-bottom: 3px solid #388e3c;
+    }
+    .logo {
+      font-weight: bold;
+    }
+    .container {
+      padding: 20px;
+    }
+    textarea, button, select {
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      border-radius: 8px;
+    }
+    .post, .reply {
+      background: white;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .post small, .reply small {
+      color: gray;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: #66bb6a;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .tab.active {
+      background: #388e3c;
+    }
+    .subforum {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -24,19 +70,30 @@
   </div>
 
   <div class="container">
-    <h2>Post a Message</h2>
-    <textarea id="post-content" rows="4" placeholder="Write something..."></textarea>
-    <button onclick="submitPost()">Post</button>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('brickbugs')">BRICKBUGS</div>
+      <div class="tab" onclick="switchTab('help')">Help Center</div>
+      <div class="tab" onclick="switchTab('fun')">Fun</div>
+    </div>
 
-    <h3>All Posts</h3>
+    <div>
+      <h2>Create a Subforum Post</h2>
+      <input type="text" id="subforum-title" placeholder="Subforum Title" />
+      <textarea id="post-content" rows="4" placeholder="Write something..."></textarea>
+      <button onclick="submitPost()">Post</button>
+    </div>
+
+    <h3>Subforums</h3>
     <div id="posts"></div>
   </div>
 
-  <!-- Firebase Modular SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, orderBy, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, collection, addDoc, query,
+      where, orderBy, getDocs, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -53,6 +110,7 @@
     const db = getFirestore(app);
 
     let currentUserData = null;
+    let currentTab = 'brickbugs';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -60,8 +118,8 @@
         return;
       }
 
-      const userDoc = await getDocs(query(collection(db, "users")));
-      userDoc.forEach(doc => {
+      const usersSnap = await getDocs(query(collection(db, "users")));
+      usersSnap.forEach(doc => {
         if (doc.id === user.uid) {
           currentUserData = doc.data();
         }
@@ -71,16 +129,20 @@
     });
 
     async function submitPost() {
+      const title = document.getElementById("subforum-title").value.trim();
       const content = document.getElementById("post-content").value.trim();
-      if (!content) return alert("Post cannot be empty.");
+      if (!title || !content) return alert("Please fill out all fields.");
 
       try {
         await addDoc(collection(db, "posts"), {
+          section: currentTab,
+          title,
           content,
           author: currentUserData?.username || "Unknown",
           timestamp: serverTimestamp()
         });
         document.getElementById("post-content").value = "";
+        document.getElementById("subforum-title").value = "";
         loadPosts();
       } catch (err) {
         console.error("Error posting:", err);
@@ -91,20 +153,32 @@
       const postsContainer = document.getElementById("posts");
       postsContainer.innerHTML = "";
 
-      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-      const querySnapshot = await getDocs(q);
+      const q = query(
+        collection(db, "posts"),
+        where("section", "==", currentTab),
+        orderBy("timestamp", "desc")
+      );
 
+      const querySnapshot = await getDocs(q);
       querySnapshot.forEach(doc => {
         const data = doc.data();
         const div = document.createElement("div");
         div.className = "post";
         div.innerHTML = `
+          <h4>${data.title}</h4>
           <p>${data.content}</p>
           <small>Posted by ${data.author || "Unknown"} on ${data.timestamp?.toDate().toLocaleString() || "..."}</small>
         `;
         postsContainer.appendChild(div);
       });
     }
+
+    window.switchTab = function(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.tab:nth-child(${tab === 'brickbugs' ? 1 : tab === 'help' ? 2 : 3})`).classList.add('active');
+      loadPosts();
+    };
 
     window.submitPost = submitPost;
   </script>
