@@ -20,7 +20,16 @@
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = { /* your config */ };
+const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.appspot.com",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
+};
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
