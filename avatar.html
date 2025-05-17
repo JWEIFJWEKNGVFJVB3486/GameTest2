@@ -105,127 +105,126 @@
   <div id="owned-hats-container"></div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.appspot.com",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  let hatItems = [];
+  let currentUserUid = null;
+  let userData = null;
+
+  async function loadHatItems() {
+    const hatsCol = collection(db, "hats"); // ✅ Use the same collection as the shop uses
+    const hatSnapshot = await getDocs(hatsCol);
+    hatItems = hatSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); // ✅ Include the hat's ID
+  }
+
+  async function loadUserData() {
+    const userRef = doc(db, "users", currentUserUid);
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      userData = docSnap.data();
+      if (!userData.avatarColor) userData.avatarColor = "#3498db";
+      if (!userData.equippedHat) userData.equippedHat = "";
+      if (!userData.hats) userData.hats = [];
+    } else {
+      userData = { avatarColor: "#3498db", equippedHat: "", hats: [] };
+    }
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return window.location.href = "index.html";
+    currentUserUid = user.uid;
+
+    await loadHatItems();
+    await loadUserData();
+
+    setupUI();
+  });
+
+  const avatarCube = document.getElementById("avatar-cube");
+  const equippedHatImg = document.getElementById("equipped-hat");
+  const ownedHatsContainer = document.getElementById("owned-hats-container");
+  const colorPicker = document.getElementById("color-picker");
+
+  function setupUI() {
+    avatarCube.style.backgroundColor = userData.avatarColor;
+    colorPicker.value = userData.avatarColor;
+    updateEquippedHat();
+    renderOwnedHats();
+
+    colorPicker.oninput = async (e) => {
+      const newColor = e.target.value;
+      avatarCube.style.backgroundColor = newColor;
+      userData.avatarColor = newColor;
+      await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
     };
+  }
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let shopItems = [];
-    let currentUserUid = null;
-    let userData = null;
-
-    async function loadShopItems() {
-      const shopItemsCol = collection(db, "shopItems");
-      const shopSnapshot = await getDocs(shopItemsCol);
-      shopItems = shopSnapshot.docs.map(doc => doc.data());
-    }
-
-    async function loadUserData() {
-      const userRef = doc(db, "users", currentUserUid);
-      const docSnap = await getDoc(userRef);
-      if (docSnap.exists()) {
-        userData = docSnap.data();
-        if (!userData.avatarColor) userData.avatarColor = "#3498db";
-        if (!userData.equippedHat) userData.equippedHat = "";
-        if (!userData.hats) userData.hats = [];
-      } else {
-        userData = { avatarColor: "#3498db", equippedHat: "", hats: [] };
+  function updateEquippedHat() {
+    if (userData.equippedHat) {
+      const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
+      if (hatInfo) {
+        equippedHatImg.src = hatInfo.img;
+        equippedHatImg.alt = hatInfo.name;
+        equippedHatImg.style.display = "block";
+        equippedHatImg.classList.remove("equipped");
+        return;
       }
     }
+    equippedHatImg.style.display = "none";
+    equippedHatImg.src = "";
+    equippedHatImg.alt = "";
+  }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      currentUserUid = user.uid;
-
-      // Load shop items and user data first
-      await loadShopItems();
-      await loadUserData();
-
-      setupUI();
-    });
-
-    const avatarCube = document.getElementById("avatar-cube");
-    const equippedHatImg = document.getElementById("equipped-hat");
-    const ownedHatsContainer = document.getElementById("owned-hats-container");
-    const colorPicker = document.getElementById("color-picker");
-
-    function setupUI() {
-      avatarCube.style.backgroundColor = userData.avatarColor;
-      colorPicker.value = userData.avatarColor;
-      updateEquippedHat();
-      renderOwnedHats();
-
-      colorPicker.oninput = async (e) => {
-        const newColor = e.target.value;
-        avatarCube.style.backgroundColor = newColor;
-        userData.avatarColor = newColor;
-        await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
-      };
+  function renderOwnedHats() {
+    ownedHatsContainer.innerHTML = "";
+    if (!userData.hats || userData.hats.length === 0) {
+      ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
+      return;
     }
 
-    function updateEquippedHat() {
-      if (userData.equippedHat) {
-        const hatInfo = shopItems.find(hat => hat.id === userData.equippedHat);
-        if (hatInfo) {
-          equippedHatImg.src = hatInfo.img;
-          equippedHatImg.alt = hatInfo.name;
-          equippedHatImg.style.display = "block";
-          equippedHatImg.classList.remove("equipped");
-          return;
-        }
+    userData.hats.forEach(hatId => {
+      const hatInfo = hatItems.find(hat => hat.id === hatId);
+      if (!hatInfo) return;
+
+      const hatImg = document.createElement("img");
+      hatImg.src = hatInfo.img;
+      hatImg.alt = hatInfo.name;
+
+      if (userData.equippedHat === hatId) {
+        hatImg.classList.add("equipped");
       }
-      equippedHatImg.style.display = "none";
-      equippedHatImg.src = "";
-      equippedHatImg.alt = "";
-    }
 
-    function renderOwnedHats() {
-      ownedHatsContainer.innerHTML = "";
-      userData.hats.forEach(hatId => {
-        const hatInfo = shopItems.find(hat => hat.id === hatId);
-        if (!hatInfo) return;
-
-        const hatImg = document.createElement("img");
-        hatImg.src = hatInfo.img;
-        hatImg.alt = hatInfo.name;
-
+      hatImg.onclick = async () => {
         if (userData.equippedHat === hatId) {
-          hatImg.classList.add("equipped");
+          userData.equippedHat = "";
         } else {
-          hatImg.classList.remove("equipped");
+          userData.equippedHat = hatId;
         }
+        await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+        updateEquippedHat();
+        renderOwnedHats();
+      };
 
-        hatImg.onclick = async () => {
-          if (userData.equippedHat === hatId) {
-            userData.equippedHat = "";
-          } else {
-            userData.equippedHat = hatId;
-          }
-          await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
-          updateEquippedHat();
-          renderOwnedHats();
-        };
+      ownedHatsContainer.appendChild(hatImg);
+    });
+  }
+</script>
 
-        ownedHatsContainer.appendChild(hatImg);
-      });
-
-      if (userData.hats.length === 0) {
-        ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
-      }
-    }
-  </script>
 </body>
 </html>
