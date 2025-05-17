@@ -1,169 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>BrickBugs Forums</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-    }
-
-    .navbar {
-      background: #007bff;
-      color: white;
-      padding: 10px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-weight: bold;
-      font-size: 1.5em;
-    }
-
-    .nav-links a {
-      color: white;
-      text-decoration: none;
-      margin-left: 15px;
-      font-size: 1em;
-    }
-
-    .content {
-      padding: 20px;
-    }
-
-    #post-list {
-      margin-top: 20px;
-    }
-
-    .post {
-      background: white;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    textarea {
-      width: 100%;
-      padding: 10px;
-      resize: vertical;
-      min-height: 60px;
-      font-size: 1em;
-      margin-bottom: 10px;
-    }
-
-    button {
-      padding: 8px 14px;
-      border: none;
-      background: #28a745;
-      color: white;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BrickBugs – Forums</title>
+<style>
+ body{font-family:Arial;background:#f0f0f0;margin:0;}
+ .navbar{background:#007bff;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;}
+ .navbar a{color:#fff;text-decoration:none;margin-left:15px;}
+ .content{padding:20px;}
+ textarea{width:100%;min-height:60px;padding:10px;margin-bottom:10px;}
+ button{background:#28a745;color:#fff;border:none;padding:8px 14px;border-radius:5px;cursor:pointer;}
+ .post{background:#fff;padding:10px;border-radius:5px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,.1);}
+</style>
 </head>
 <body>
-
-  <div class="navbar">
-    <div class="logo">BrickBugs</div>
-    <div class="nav-links">
-      <a href="home.html">🏠 Home</a>
-      <a href="forums.html">🗨️ Forums</a>
-    </div>
+<div class="navbar">
+  <div class="logo">BrickBugs</div>
+  <div>
+    <a href="home.html">🏠 Home</a>
+    <a href="forums.html">🗨️ Forums</a>
   </div>
+</div>
 
-  <div class="content">
-    <h2>Community Forums</h2>
-    <p>Share a post or question below:</p>
-    <textarea id="post-content" placeholder="What's on your mind?"></textarea><br>
-    <button onclick="submitPost()">Post</button>
+<div class="content">
+  <h2>🗨️ Community Forums</h2>
+  <textarea id="post-content" placeholder="What's on your mind?"></textarea>
+  <button onclick="submitPost()">Post</button>
+  <div id="post-list"></div>
+</div>
 
-    <div id="post-list"></div>
-  </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, addDoc,
+  query, orderBy, onSnapshot, serverTimestamp, doc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  <!-- Firebase Modular SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      query,
-      orderBy,
-      onSnapshot,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig = { /* …same config… */ };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.appspot.com",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743"
-    };
+let currentUser = null, currentUsername = "";
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+onAuthStateChanged(auth, async user=>{
+  if(!user){ location.href="index.html"; return; }
+  currentUser = user;
+  const snap  = await getDoc(doc(db,"users",user.uid));
+  currentUsername = snap.data().username;
+  loadPosts();
+});
 
-    let currentUser = null;
+window.submitPost = async ()=>{
+  const content = document.getElementById("post-content").value.trim();
+  if(!content) return alert("Post cannot be empty.");
+  await addDoc(collection(db,"forumPosts"),{
+    uid: currentUser.uid,
+    username: currentUsername,
+    content,
+    timestamp: serverTimestamp()
+  });
+  document.getElementById("post-content").value="";
+};
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        loadPosts();
-      } else {
-        window.location.href = "index.html";
-      }
+function loadPosts(){
+  const list = document.getElementById("post-list");
+  const q = query(collection(db,"forumPosts"),orderBy("timestamp","desc"));
+  onSnapshot(q,snap=>{
+    list.innerHTML="";
+    snap.forEach(docSnap=>{
+      const p=docSnap.data();
+      const div=document.createElement("div");
+      div.className="post";
+      div.innerHTML=`<strong>${p.username}</strong><br>
+                     <p>${p.content}</p>
+                     <small>${p.timestamp?.toDate().toLocaleString()||"Just now"}</small>`;
+      list.appendChild(div);
     });
-
-    // Submit new forum post
-    window.submitPost = async function submitPost() {
-      const content = document.getElementById("post-content").value.trim();
-      if (content === "") return alert("Post cannot be empty.");
-
-      try {
-        await addDoc(collection(db, "forumPosts"), {
-          content,
-          uid: currentUser.uid,
-          email: currentUser.email,
-          timestamp: serverTimestamp()
-        });
-        document.getElementById("post-content").value = "";
-      } catch (error) {
-        console.error("Error posting:", error);
-        alert("Failed to post. Try again.");
-      }
-    };
-
-    // Load and display posts
-    function loadPosts() {
-      const postList = document.getElementById("post-list");
-      const q = query(collection(db, "forumPosts"), orderBy("timestamp", "desc"));
-
-      onSnapshot(q, (snapshot) => {
-        postList.innerHTML = "";
-        snapshot.forEach((doc) => {
-          const post = doc.data();
-          const div = document.createElement("div");
-          div.className = "post";
-          div.innerHTML = `
-            <strong>${post.email}</strong><br>
-            <p>${post.content}</p>
-            <small>${post.timestamp?.toDate().toLocaleString() || "Just now"}</small>
-          `;
-          postList.appendChild(div);
-        });
-      });
-    }
-  </script>
+  });
+}
+</script>
 </body>
 </html>
