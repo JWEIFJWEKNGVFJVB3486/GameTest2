@@ -119,11 +119,13 @@
       ctx.fillText(p.username || "?", p.x - 10, p.y - 15);
 
       // Hat (if any)
-      if (p.equippedHat && hatImages[p.equippedHat]) {
-        const img = hatImages[p.equippedHat];
-        ctx.drawImage(hatImage, p.x - 10, p.y - 20, 20, 20); // Moves hat down
+     if (p.equippedHat && hatImages[p.equippedHat]) {
+  const img = hatImages[p.equippedHat];
+  if (img.complete) {
+    ctx.drawImage(img, p.x - 10, p.y - 30, 20, 20); // Adjust Y to move the hat up/down
+  }
+}
 
-      }
 
       // Speech bubble
       if (p.chat) {
