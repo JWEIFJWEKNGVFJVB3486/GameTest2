@@ -4,22 +4,77 @@
   <title>Game Studio</title>
   <style>
     body { margin: 0; font-family: Arial; }
-    #toolbar { padding: 10px; background: #222; color: white; }
-    #editor { height: calc(100vh - 40px); background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
-    #gameArea { width: 600px; height: 400px; background: white; border: 1px solid #ccc; }
+    #toolbar {
+      padding: 10px; background: #222; color: white; display: flex; align-items: center; justify-content: space-between;
+    }
+    #gameTitle {
+      font-weight: bold;
+    }
+    #editor {
+      height: calc(100vh - 50px);
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #gameArea {
+      width: 600px;
+      height: 400px;
+      background: white;
+      border: 1px solid #ccc;
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      grid-template-rows: repeat(13, 1fr);
+      gap: 2px;
+      user-select: none;
+      position: relative;
+    }
+    .cell {
+      background: #eee;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      transition: background 0.2s;
+    }
+    .cell.part {
+      background: #3498db;
+    }
+    .cell.player {
+      background: #e74c3c;
+      position: relative;
+      z-index: 2;
+    }
+    button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #addPartBtn { background: #28a745; color: white; }
+    #playTestBtn { background: #f39c12; color: white; }
+    #saveBtn { background: #007bff; color: white; }
   </style>
 </head>
 <body>
 
 <div id="toolbar">
   <span id="gameTitle">Loading...</span>
-  <button id="saveBtn" style="float:right;">Save Changes</button>
+  <div>
+    <button id="addPartBtn">Add Part</button>
+    <button id="playTestBtn">Play Test</button>
+    <button id="saveBtn">Save Changes</button>
+  </div>
 </div>
 
 <div id="editor">
-  <div id="gameArea" contenteditable="true">
-    <!-- You can edit the contents visually here -->
-  </div>
+  <div id="gameArea"></div>
 </div>
 
 <script type="module">
@@ -47,6 +102,88 @@
   const gameTitle = document.getElementById("gameTitle");
   const gameArea = document.getElementById("gameArea");
   const saveBtn = document.getElementById("saveBtn");
+  const addPartBtn = document.getElementById("addPartBtn");
+  const playTestBtn = document.getElementById("playTestBtn");
+
+  // Grid size
+  const COLS = 20;
+  const ROWS = 13;
+
+  // Parts stored as set of cell keys "x,y"
+  let parts = new Set();
+  let isAddingParts = false;
+  let isPlayTesting = false;
+
+  // Player position for playtest mode
+  let playerPos = { x: 0, y: 0 };
+
+  function createGrid() {
+    gameArea.innerHTML = "";
+    gameArea.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    gameArea.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.dataset.x = x;
+        cell.dataset.y = y;
+
+        const key = `${x},${y}`;
+        if (parts.has(key)) cell.classList.add("part");
+
+        cell.addEventListener("click", () => {
+          if (isPlayTesting) return; // no editing in play mode
+
+          if (isAddingParts) {
+            // Toggle part
+            if (parts.has(key)) {
+              parts.delete(key);
+              cell.classList.remove("part");
+            } else {
+              parts.add(key);
+              cell.classList.add("part");
+            }
+          }
+        });
+
+        gameArea.appendChild(cell);
+      }
+    }
+  }
+
+  function updateGrid() {
+    // Update cells with parts & player position
+    const cells = gameArea.querySelectorAll(".cell");
+    cells.forEach(cell => {
+      const x = parseInt(cell.dataset.x);
+      const y = parseInt(cell.dataset.y);
+      const key = `${x},${y}`;
+
+      if (parts.has(key)) {
+        cell.classList.add("part");
+      } else {
+        cell.classList.remove("part");
+      }
+
+      if (isPlayTesting && playerPos.x === x && playerPos.y === y) {
+        cell.classList.add("player");
+      } else {
+        cell.classList.remove("player");
+      }
+    });
+  }
+
+  function movePlayer(dx, dy) {
+    const newX = playerPos.x + dx;
+    const newY = playerPos.y + dy;
+    if (newX < 0 || newX >= COLS || newY < 0 || newY >= ROWS) return; // bounds check
+    if (parts.has(`${newX},${newY}`)) return; // blocked by part
+
+    playerPos.x = newX;
+    playerPos.y = newY;
+    updateGrid();
+  }
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) return location.href = "index.html";
@@ -55,15 +192,77 @@
     if (!docSnap.exists()) return alert("Game not found!");
 
     const data = docSnap.data();
-    gameTitle.textContent = data.name;
-    gameArea.innerText = data.description; // You could make this a custom scene in the future
+    gameTitle.textContent = data.name || "Unnamed Game";
 
-    saveBtn.addEventListener("click", async () => {
-      await updateDoc(docRef, {
-        description: gameArea.innerText
+    // Load parts or init empty
+    parts = new Set((data.parts || []).map(p => `${p.x},${p.y}`));
+
+    createGrid();
+    updateGrid();
+
+    // Button handlers
+    addPartBtn.onclick = () => {
+      if (isPlayTesting) return alert("Exit Play Test first!");
+      isAddingParts = !isAddingParts;
+      addPartBtn.textContent = isAddingParts ? "Stop Adding" : "Add Part";
+    };
+
+    playTestBtn.onclick = () => {
+      isPlayTesting = !isPlayTesting;
+      if (isPlayTesting) {
+        // Start play test at top-left open cell
+        playerPos = { x: 0, y: 0 };
+        // Move player to first non-part cell
+        while(parts.has(`${playerPos.x},${playerPos.y}`)) {
+          playerPos.x++;
+          if (playerPos.x >= COLS) {
+            playerPos.x = 0;
+            playerPos.y++;
+            if (playerPos.y >= ROWS) break;
+          }
+        }
+        playTestBtn.textContent = "Stop Play Test";
+        addPartBtn.disabled = true;
+      } else {
+        playTestBtn.textContent = "Play Test";
+        addPartBtn.disabled = false;
+      }
+      updateGrid();
+    };
+
+    saveBtn.onclick = async () => {
+      // Save parts as array of {x,y} to Firestore
+      const partsArray = [...parts].map(key => {
+        const [x,y] = key.split(",").map(Number);
+        return { x, y };
       });
+      await updateDoc(docRef, { parts: partsArray });
       alert("Changes saved!");
+    };
+
+    // Keyboard controls for play testing
+    window.addEventListener("keydown", e => {
+      if (!isPlayTesting) return;
+      switch(e.key) {
+        case "ArrowUp":
+          movePlayer(0, -1);
+          e.preventDefault();
+          break;
+        case "ArrowDown":
+          movePlayer(0, 1);
+          e.preventDefault();
+          break;
+        case "ArrowLeft":
+          movePlayer(-1, 0);
+          e.preventDefault();
+          break;
+        case "ArrowRight":
+          movePlayer(1, 0);
+          e.preventDefault();
+          break;
+      }
     });
+
   });
 </script>
 
