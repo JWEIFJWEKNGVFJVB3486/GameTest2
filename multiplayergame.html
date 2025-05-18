@@ -111,18 +111,21 @@
     for (const uid in players) {
       const p = players[uid];
       ctx.fillStyle = p.color || "#000";
-      ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+      ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
+
 
       // Username
       ctx.fillStyle = "black";
       ctx.font = "14px Comic Sans MS";
-      ctx.fillText(p.username || "?", p.x - 10, p.y - 20);
+     ctx.fillText(p.username || "?", p.x - 20, p.y - 30);
+
 
       // Hat (if any)
      if (p.equippedHat && hatImages[p.equippedHat]) {
   const img = hatImages[p.equippedHat];
   if (img.complete) {
-    ctx.drawImage(img, p.x - 10, p.y - 27, 30, 30); // Adjust Y to move the hat up/down
+    ctx.drawImage(img, p.x - 10, p.y - 47, 40, 40);
+
   }
 }
 
@@ -133,10 +136,10 @@
         ctx.strokeStyle = "black";
         ctx.font = "12px Comic Sans MS";
         const textWidth = ctx.measureText(p.chat).width;
-        ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
-        ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 35, textWidth + 10, 18);
+        ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
+        ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
         ctx.fillStyle = "black";
-        ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 22);
+       ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 37);
       }
     }
   }
