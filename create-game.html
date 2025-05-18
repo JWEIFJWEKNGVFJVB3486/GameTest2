@@ -103,31 +103,29 @@
     const uid = user.uid;
     loadGames(uid);
 
-    saveBtn.addEventListener("click", async () => {
-      const name = nameInput.value.trim();
-      const description = descInput.value.trim();
-      if (!name || !description) return alert("Please fill in all fields.");
+   saveBtn.addEventListener("click", async () => {
+  const name = nameInput.value.trim();
+  const description = descInput.value.trim();
+  if (!name || !description) return alert("Please fill in all fields.");
 
-     if (editingGameId) {
-  const docRef = doc(firestore, "games", editingGameId);
-  await updateDoc(docRef, { name, description });
-  window.location.href = `studio.html?gameId=${editingGameId}`;
-} else {
-  const docRef = await addDoc(collection(firestore, "games"), {
-    name,
-    description,
-    createdBy: uid,
-    createdAt: Date.now()
-  });
-  window.location.href = `studio.html?gameId=${docRef.id}`;
-}
-
-
-      nameInput.value = "";
-      descInput.value = "";
-      loadGames(uid);
+  if (editingGameId) {
+    const docRef = doc(firestore, "games", editingGameId);
+    await updateDoc(docRef, { name, description });
+    editingGameId = null;
+  } else {
+    await addDoc(collection(firestore, "games"), {
+      name,
+      description,
+      createdBy: uid,
+      createdAt: Date.now()
     });
-  });
+  }
+
+  nameInput.value = "";
+  descInput.value = "";
+  loadGames(uid);
+});
+
 
   async function loadGames(uid) {
     gamesContainer.innerHTML = "";
@@ -145,10 +143,9 @@
       `;
 
       div.querySelector(".edit-btn").addEventListener("click", () => {
-        nameInput.value = data.name;
-        descInput.value = data.description;
-        editingGameId = docSnap.id;
-      });
+  // Redirect to studio with game ID
+  window.location.href = `studio.html?gameId=${docSnap.id}`;
+});
 
       gamesContainer.appendChild(div);
     });
