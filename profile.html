@@ -105,6 +105,19 @@
       z-index: 1;
       display: none;
     }
+
+    .avatar-face {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
   </style>
 </head>
 <body>
@@ -183,23 +196,26 @@
       loadProfile();
     };
 
-    function renderAvatar(data) {
-      const avatarColor = data.avatarColor || "#3498db";
-      const equippedHatId = data.equippedHat || "";
+function renderAvatar(data) {
+  const avatarColor = data.avatarColor || "#3498db";
+  const equippedHatId = data.equippedHat || "";
+  const faceUrl = data.faceUrl || ""; // Add this line
 
-      let hatImgSrc = "";
-      if (equippedHatId && hatsMap.has(equippedHatId)) {
-        const hat = hatsMap.get(equippedHatId);
-        hatImgSrc = hat.imageUrl || "";
-      }
+  let hatImgSrc = "";
+  if (equippedHatId && hatsMap.has(equippedHatId)) {
+    const hat = hatsMap.get(equippedHatId);
+    hatImgSrc = hat.imageUrl || "";
+  }
 
-      return `
-        <div class="avatar-container">
-          <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
-          ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
-        </div>
-      `;
-    }
+  return `
+    <div class="avatar-container">
+      <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
+      ${faceUrl ? `<img src="${faceUrl}" alt="Face" class="avatar-face" />` : ""}
+      ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
+    </div>
+  `;
+}
+
 
     async function loadProfile() {
       const data = currentProfileData;
