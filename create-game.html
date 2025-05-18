@@ -1,128 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Create Games</title>
+  <title>Create Game</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 2rem;
-      max-width: 600px;
-      margin: auto;
-      background: #f9f9f9;
+      padding: 20px;
+      background: #f0f8ff;
     }
+
     h1 {
-      text-align: center;
+      color: #333;
     }
-    form {
-      background: white;
-      padding: 1rem 2rem;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
+
     label {
       display: block;
-      margin-top: 1rem;
+      margin-top: 10px;
       font-weight: bold;
     }
-    input[type="text"],
-    textarea {
+
+    input, textarea, button, select {
+      padding: 8px;
       width: 100%;
-      padding: 0.5rem;
-      margin-top: 0.25rem;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
+      margin-top: 5px;
       box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #aaa;
     }
+
     button {
-      margin-top: 1.5rem;
-      padding: 0.7rem 1.5rem;
-      font-size: 1rem;
-      cursor: pointer;
-      border: none;
-      background-color: #4CAF50;
+      background: #28a745;
       color: white;
-      border-radius: 4px;
-    }
-    #message {
-      margin-top: 1rem;
       font-weight: bold;
-      color: green;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    #gamesList {
+      margin-top: 40px;
+    }
+
+    .game-item {
+      background: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .edit-btn {
+      background: #007bff;
+      color: white;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Create a New Game</h1>
-  <form id="createGameForm">
-    <label for="title">Game Title</label>
-    <input type="text" id="title" name="title" required minlength="3" maxlength="50" />
 
-    <label for="description">Description</label>
-    <textarea id="description" name="description" rows="4" maxlength="300" placeholder="Describe your game..."></textarea>
+<h1>Create or Edit a Game</h1>
 
-    <button type="submit">Create Game</button>
-  </form>
+<label for="gameName">Game Name</label>
+<input type="text" id="gameName" placeholder="My Awesome Game" />
 
-  <div id="message"></div>
+<label for="gameDescription">Description</label>
+<textarea id="gameDescription" rows="4" placeholder="Describe your game here..."></textarea>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
-    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+<button id="saveBtn">Save Game</button>
 
-    // Your Firebase config (use the one you provided)
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.firebasestorage.app",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
-    };
+<div id="gamesList">
+  <h2>Your Games</h2>
+  <div id="gamesContainer"></div>
+</div>
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, doc, getDocs, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // Form submit handler
-    const form = document.getElementById('createGameForm');
-    const messageDiv = document.getElementById('message');
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
 
-      const title = form.title.value.trim();
-      const description = form.description.value.trim();
+  let editingGameId = null;
 
-      if (!title) {
-        messageDiv.textContent = "Please enter a game title.";
-        messageDiv.style.color = 'red';
-        return;
+  const nameInput = document.getElementById("gameName");
+  const descInput = document.getElementById("gameDescription");
+  const saveBtn = document.getElementById("saveBtn");
+  const gamesContainer = document.getElementById("gamesContainer");
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return window.location.href = "index.html";
+    const uid = user.uid;
+    loadGames(uid);
+
+    saveBtn.addEventListener("click", async () => {
+      const name = nameInput.value.trim();
+      const description = descInput.value.trim();
+      if (!name || !description) return alert("Please fill in all fields.");
+
+      if (editingGameId) {
+        const docRef = doc(firestore, "games", editingGameId);
+        await updateDoc(docRef, { name, description });
+        editingGameId = null;
+      } else {
+        await addDoc(collection(firestore, "games"), {
+          name,
+          description,
+          createdBy: uid,
+          createdAt: Date.now()
+        });
       }
 
-      // Create a new game reference with a unique key
-      const gamesRef = ref(db, 'games');
-      const newGameRef = push(gamesRef);
-
-      // Set the new game data
-      set(newGameRef, {
-        title,
-        description,
-        createdAt: Date.now()
-      }).then(() => {
-        messageDiv.textContent = `Game "${title}" created successfully!`;
-        messageDiv.style.color = 'green';
-        form.reset();
-      }).catch((error) => {
-        messageDiv.textContent = 'Error creating game: ' + error.message;
-        messageDiv.style.color = 'red';
-      });
+      nameInput.value = "";
+      descInput.value = "";
+      loadGames(uid);
     });
-  </script>
+  });
+
+  async function loadGames(uid) {
+    gamesContainer.innerHTML = "";
+    const q = query(collection(firestore, "games"), where("createdBy", "==", uid));
+    const snapshot = await getDocs(q);
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className = "game-item";
+      div.innerHTML = `
+        <strong>${data.name}</strong><br>
+        <small>${data.description}</small><br>
+        <button class="edit-btn">Edit</button>
+      `;
+
+      div.querySelector(".edit-btn").addEventListener("click", () => {
+        nameInput.value = data.name;
+        descInput.value = data.description;
+        editingGameId = docSnap.id;
+      });
+
+      gamesContainer.appendChild(div);
+    });
+  }
+</script>
+
 </body>
 </html>
