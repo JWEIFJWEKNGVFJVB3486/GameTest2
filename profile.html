@@ -126,7 +126,8 @@
     <h2>Search Profile</h2>
     <input type="text" id="usernameInput" placeholder="Enter username..." />
     <br />
-    <button onclick="searchByUsername()">Search</button>
+    <button id="searchBtn">Search</button>
+
     <button class="home-btn" onclick="window.location.href='home.html'">Home</button>
 
     <div id="profileData" style="margin-top: 20px;"></div>
@@ -157,6 +158,11 @@
     let currentProfileUid = null;
     let currentProfileData = null;
     let hatsMap = new Map(); // id => hat data
+
+    document.addEventListener("DOMContentLoaded", () => {
+  const searchBtn = document.getElementById("searchBtn");
+  searchBtn.addEventListener("click", searchByUsername);
+});
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
