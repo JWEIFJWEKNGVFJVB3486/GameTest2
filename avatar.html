@@ -42,9 +42,19 @@
       width: 120px;
       pointer-events: none;
       user-select: none;
-      border: none !important;
-      box-shadow: none !important;
-      transition: filter 0.3s ease;
+      display: none;
+    }
+
+    #equipped-face {
+      position: absolute;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 60px;
+      pointer-events: none;
+      user-select: none;
+      display: none;
     }
 
     #color-picker {
@@ -56,7 +66,8 @@
       cursor: pointer;
     }
 
-    #owned-hats-container img {
+    #owned-hats-container img,
+    #owned-faces-container img {
       width: 80px;
       margin: 8px;
       cursor: pointer;
@@ -65,7 +76,8 @@
       transition: border-color 0.3s;
     }
 
-    #owned-hats-container img.equipped {
+    #owned-hats-container img.equipped,
+    #owned-faces-container img.equipped {
       border-color: #4CAF50;
     }
 
@@ -94,7 +106,8 @@
 
   <div id="avatar-container">
     <div id="avatar-cube"></div>
-    <img id="equipped-hat" src="" alt="" style="display:none" />
+    <img id="equipped-hat" src="" alt="Equipped Hat" />
+    <img id="equipped-face" src="" alt="Equipped Face" />
   </div>
 
   <label for="color-picker">Change Cube Color: </label>
@@ -103,126 +116,171 @@
   <h2>Your Owned Hats (Click to Equip/Unequip)</h2>
   <div id="owned-hats-container"></div>
 
+  <h2>Your Owned Faces (Click to Equip/Unequip)</h2>
+  <div id="owned-faces-container"></div>
+
   <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-    authDomain: "gametest2-ba5fe.firebaseapp.com",
-    projectId: "gametest2-ba5fe",
-    storageBucket: "gametest2-ba5fe.appspot.com",
-    messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  let hatItems = [];
-  let currentUserUid = null;
-  let userData = null;
-
-  async function loadHatItems() {
-    const hatsCol = collection(db, "hats");
-    const hatSnapshot = await getDocs(hatsCol);
-    hatItems = hatSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  }
-
-  async function loadUserData() {
-    const userRef = doc(db, "users", currentUserUid);
-    const docSnap = await getDoc(userRef);
-    if (docSnap.exists()) {
-      userData = docSnap.data();
-      if (!userData.avatarColor) userData.avatarColor = "#3498db";
-      if (!userData.equippedHat) userData.equippedHat = "";
-      if (!userData.hats) userData.hats = [];
-    } else {
-      userData = { avatarColor: "#3498db", equippedHat: "", hats: [] };
-    }
-  }
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return window.location.href = "index.html";
-    currentUserUid = user.uid;
-
-    await loadHatItems();
-    await loadUserData();
-
-    setupUI();
-  });
-
-  const avatarCube = document.getElementById("avatar-cube");
-  const equippedHatImg = document.getElementById("equipped-hat");
-  const ownedHatsContainer = document.getElementById("owned-hats-container");
-  const colorPicker = document.getElementById("color-picker");
-
-  function setupUI() {
-    avatarCube.style.backgroundColor = userData.avatarColor;
-    colorPicker.value = userData.avatarColor;
-    updateEquippedHat();
-    renderOwnedHats();
-
-    colorPicker.oninput = async (e) => {
-      const newColor = e.target.value;
-      avatarCube.style.backgroundColor = newColor;
-      userData.avatarColor = newColor;
-      await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
     };
-  }
 
-  function updateEquippedHat() {
-    if (userData.equippedHat) {
-      const hatInfo = hatItems.find(hat => hat.id === userData.equippedHat);
-      if (hatInfo && hatInfo.imageUrl) {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let hatItems = [];
+    let faceItems = [];
+    let currentUserUid = null;
+    let userData = null;
+
+    async function loadHatItems() {
+      const hatsCol = collection(db, "hats");
+      const hatSnapshot = await getDocs(hatsCol);
+      hatItems = hatSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async function loadFaceItems() {
+      const facesCol = collection(db, "faces");
+      const faceSnapshot = await getDocs(facesCol);
+      faceItems = faceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+
+    async function loadUserData() {
+      const userRef = doc(db, "users", currentUserUid);
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        userData = docSnap.data();
+        userData.avatarColor ||= "#3498db";
+        userData.equippedHat ||= "";
+        userData.equippedFace ||= "";
+        userData.hats ||= [];
+        userData.faces ||= [];
+      } else {
+        userData = {
+          avatarColor: "#3498db",
+          equippedHat: "",
+          equippedFace: "",
+          hats: [],
+          faces: []
+        };
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+      currentUserUid = user.uid;
+
+      await loadHatItems();
+      await loadFaceItems();
+      await loadUserData();
+
+      setupUI();
+    });
+
+    const avatarCube = document.getElementById("avatar-cube");
+    const equippedHatImg = document.getElementById("equipped-hat");
+    const equippedFaceImg = document.getElementById("equipped-face");
+    const ownedHatsContainer = document.getElementById("owned-hats-container");
+    const ownedFacesContainer = document.getElementById("owned-faces-container");
+    const colorPicker = document.getElementById("color-picker");
+
+    function setupUI() {
+      avatarCube.style.backgroundColor = userData.avatarColor;
+      colorPicker.value = userData.avatarColor;
+      updateEquippedHat();
+      updateEquippedFace();
+      renderOwnedHats();
+      renderOwnedFaces();
+
+      colorPicker.oninput = async (e) => {
+        const newColor = e.target.value;
+        avatarCube.style.backgroundColor = newColor;
+        userData.avatarColor = newColor;
+        await updateDoc(doc(db, "users", currentUserUid), { avatarColor: newColor });
+      };
+    }
+
+    function updateEquippedHat() {
+      const hatInfo = hatItems.find(h => h.id === userData.equippedHat);
+      if (hatInfo?.imageUrl) {
         equippedHatImg.src = hatInfo.imageUrl;
-        equippedHatImg.alt = hatInfo.name || "Equipped Hat";
         equippedHatImg.style.display = "block";
-        equippedHatImg.classList.remove("equipped");
+      } else {
+        equippedHatImg.style.display = "none";
+      }
+    }
+
+    function updateEquippedFace() {
+      const faceInfo = faceItems.find(f => f.id === userData.equippedFace);
+      if (faceInfo?.imageUrl) {
+        equippedFaceImg.src = faceInfo.imageUrl;
+        equippedFaceImg.style.display = "block";
+      } else {
+        equippedFaceImg.style.display = "none";
+      }
+    }
+
+    function renderOwnedHats() {
+      ownedHatsContainer.innerHTML = "";
+      if (userData.hats.length === 0) {
+        ownedHatsContainer.textContent = "You don't own any hats yet!";
         return;
       }
+      userData.hats.forEach(hatId => {
+        const hatInfo = hatItems.find(h => h.id === hatId);
+        if (!hatInfo) return;
+
+        const img = document.createElement("img");
+        img.src = hatInfo.imageUrl;
+        img.alt = hatInfo.name;
+        if (userData.equippedHat === hatId) img.classList.add("equipped");
+
+        img.onclick = async () => {
+          userData.equippedHat = userData.equippedHat === hatId ? "" : hatId;
+          await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
+          updateEquippedHat();
+          renderOwnedHats();
+        };
+
+        ownedHatsContainer.appendChild(img);
+      });
     }
-    equippedHatImg.style.display = "none";
-    equippedHatImg.src = "";
-    equippedHatImg.alt = "";
-  }
 
-  function renderOwnedHats() {
-    ownedHatsContainer.innerHTML = "";
-    if (!userData.hats || userData.hats.length === 0) {
-      ownedHatsContainer.textContent = "You don't own any hats yet! Buy some in the shop.";
-      return;
-    }
-
-    userData.hats.forEach(hatId => {
-      const hatInfo = hatItems.find(hat => hat.id === hatId);
-      if (!hatInfo) return;
-
-      const hatImg = document.createElement("img");
-      hatImg.src = hatInfo.imageUrl;
-      hatImg.alt = hatInfo.name;
-
-      if (userData.equippedHat === hatId) {
-        hatImg.classList.add("equipped");
+    function renderOwnedFaces() {
+      ownedFacesContainer.innerHTML = "";
+      if (userData.faces.length === 0) {
+        ownedFacesContainer.textContent = "You don't own any faces yet!";
+        return;
       }
+      userData.faces.forEach(faceId => {
+        const faceInfo = faceItems.find(f => f.id === faceId);
+        if (!faceInfo) return;
 
-      hatImg.onclick = async () => {
-        if (userData.equippedHat === hatId) {
-          userData.equippedHat = "";
-        } else {
-          userData.equippedHat = hatId;
-        }
-        await updateDoc(doc(db, "users", currentUserUid), { equippedHat: userData.equippedHat });
-        updateEquippedHat();
-        renderOwnedHats();
-      };
+        const img = document.createElement("img");
+        img.src = faceInfo.imageUrl;
+        img.alt = faceInfo.name;
+        if (userData.equippedFace === faceId) img.classList.add("equipped");
 
-      ownedHatsContainer.appendChild(hatImg);
-    });
-  }
+        img.onclick = async () => {
+          userData.equippedFace = userData.equippedFace === faceId ? "" : faceId;
+          await updateDoc(doc(db, "users", currentUserUid), { equippedFace: userData.equippedFace });
+          updateEquippedFace();
+          renderOwnedFaces();
+        };
+
+        ownedFacesContainer.appendChild(img);
+      });
+    }
   </script>
 </body>
 </html>
