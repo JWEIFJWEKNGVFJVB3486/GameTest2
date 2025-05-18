@@ -88,10 +88,9 @@ onValue(ref(realtimeDb, "players"), async (snapshot) => {
 
   for (const id in data) {
     if (id === auth.currentUser.uid) {
-      currentPlayers[id] = player; // Preserve own player instance
+      currentPlayers[id] = player; // preserve own reference
     } else {
       currentPlayers[id] = { ...data[id] };
-
       const otherUserData = await fetchUserData(id);
       if (otherUserData) {
         currentPlayers[id].equippedHat = otherUserData.equippedHat || "";
@@ -101,6 +100,7 @@ onValue(ref(realtimeDb, "players"), async (snapshot) => {
 
   players = currentPlayers;
 });
+
 
   let hatImages = {};
   let hatsMap = new Map();
