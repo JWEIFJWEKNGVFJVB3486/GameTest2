@@ -8,10 +8,12 @@
       overflow: hidden;
       font-family: "Comic Sans MS", cursive, sans-serif;
     }
+
     canvas {
       display: block;
       background: #eef;
     }
+
     #leaderboard {
       position: absolute;
       top: 10px;
@@ -24,6 +26,7 @@
       max-height: 80vh;
       overflow-y: auto;
     }
+
     #chatInput {
       position: absolute;
       bottom: 10px;
@@ -47,10 +50,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import {
-      getDatabase, ref, set, onDisconnect,
-      onChildAdded, onChildChanged, onChildRemoved
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -82,9 +82,7 @@
 
     let player = null;
     let playerRef = null;
-    const players = {};
-    const userCache = new Map();
-
+    let players = {};
     let hatImages = {};
     let hatsMap = new Map();
 
@@ -103,18 +101,31 @@
     }
 
     async function fetchUserData(uid) {
-      if (userCache.has(uid)) return userCache.get(uid);
       const docRef = doc(firestore, "users", uid);
       const snap = await getDoc(docRef);
-      const data = snap.exists() ? snap.data() : null;
-      userCache.set(uid, data);
-      return data;
+      return snap.exists() ? snap.data() : null;
+    }
+
+    function handlePlayerUpdate(id, data) {
+      players[id] = {
+        ...data,
+        equippedHat: data.equippedHat || ""
+      };
+
+      // Async enhancement (don't delay rendering)
+      fetchUserData(id).then(userData => {
+        if (userData && players[id]) {
+          players[id].equippedHat = userData.equippedHat || "";
+        }
+      });
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (const uid in players) {
         const p = players[uid];
+        if (!p || typeof p.x !== "number" || typeof p.y !== "number") continue;
+
         ctx.fillStyle = p.color || "#000";
         ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
 
@@ -159,7 +170,9 @@
       if (keys["s"]) { player.y += 2; moved = true; }
       if (keys["a"]) { player.x -= 2; moved = true; }
       if (keys["d"]) { player.x += 2; moved = true; }
-      if (moved) set(playerRef, player);
+      if (moved) {
+        set(playerRef, player);
+      }
       draw();
       updateLeaderboard();
       requestAnimationFrame(loop);
@@ -191,15 +204,6 @@
     });
     window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    function handlePlayerUpdate(id, data) {
-      fetchUserData(id).then(userData => {
-        players[id] = {
-          ...data,
-          equippedHat: userData?.equippedHat || ""
-        };
-      });
-    }
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       await loadHats();
@@ -220,8 +224,8 @@
       set(playerRef, player);
       onDisconnect(playerRef).remove();
 
+      // Listeners to keep all players updated
       const playersRef = ref(realtimeDb, "players");
-
       onChildAdded(playersRef, snapshot => {
         const id = snapshot.key;
         const data = snapshot.val();
