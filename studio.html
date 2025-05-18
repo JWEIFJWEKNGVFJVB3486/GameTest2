@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Game Studio</title>
+  <style>
+    body { margin: 0; font-family: Arial; }
+    #toolbar { padding: 10px; background: #222; color: white; }
+    #editor { height: calc(100vh - 40px); background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
+    #gameArea { width: 600px; height: 400px; background: white; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span id="gameTitle">Loading...</span>
+  <button id="saveBtn" style="float:right;">Save Changes</button>
+</div>
+
+<div id="editor">
+  <div id="gameArea" contenteditable="true">
+    <!-- You can edit the contents visually here -->
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get("gameId");
+
+  const gameTitle = document.getElementById("gameTitle");
+  const gameArea = document.getElementById("gameArea");
+  const saveBtn = document.getElementById("saveBtn");
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return location.href = "index.html";
+    const docRef = doc(firestore, "games", gameId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return alert("Game not found!");
+
+    const data = docSnap.data();
+    gameTitle.textContent = data.name;
+    gameArea.innerText = data.description; // You could make this a custom scene in the future
+
+    saveBtn.addEventListener("click", async () => {
+      await updateDoc(docRef, {
+        description: gameArea.innerText
+      });
+      alert("Changes saved!");
+    });
+  });
+</script>
+
+</body>
+</html>
