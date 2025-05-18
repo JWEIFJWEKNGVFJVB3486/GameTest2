@@ -1,72 +1,128 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Game Studio</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Games</title>
   <style>
-    body { margin: 0; font-family: Arial; }
-    #toolbar { padding: 10px; background: #222; color: white; }
-    #editor { height: calc(100vh - 40px); background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
-    #gameArea { width: 600px; height: 400px; background: white; border: 1px solid #ccc; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+      background: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      background: white;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.25rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      border-radius: 4px;
+    }
+    #message {
+      margin-top: 1rem;
+      font-weight: bold;
+      color: green;
+    }
   </style>
 </head>
 <body>
+  <h1>Create a New Game</h1>
+  <form id="createGameForm">
+    <label for="title">Game Title</label>
+    <input type="text" id="title" name="title" required minlength="3" maxlength="50" />
 
-<div id="toolbar">
-  <span id="gameTitle">Loading...</span>
-  <button id="saveBtn" style="float:right;">Save Changes</button>
-</div>
+    <label for="description">Description</label>
+    <textarea id="description" name="description" rows="4" maxlength="300" placeholder="Describe your game..."></textarea>
 
-<div id="editor">
-  <div id="gameArea" contenteditable="true">
-    <!-- You can edit the contents visually here -->
-  </div>
-</div>
+    <button type="submit">Create Game</button>
+  </form>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <div id="message"></div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-    authDomain: "gametest2-ba5fe.firebaseapp.com",
-    projectId: "gametest2-ba5fe",
-    storageBucket: "gametest2-ba5fe.appspot.com",
-    messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7"
-  };
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
+    // Your Firebase config (use the one you provided)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.firebasestorage.app",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
+    };
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get("gameId");
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  const gameTitle = document.getElementById("gameTitle");
-  const gameArea = document.getElementById("gameArea");
-  const saveBtn = document.getElementById("saveBtn");
+    // Form submit handler
+    const form = document.getElementById('createGameForm');
+    const messageDiv = document.getElementById('message');
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return location.href = "index.html";
-    const docRef = doc(firestore, "games", gameId);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return alert("Game not found!");
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
 
-    const data = docSnap.data();
-    gameTitle.textContent = data.name;
-    gameArea.innerText = data.description; // You could make this a custom scene in the future
+      const title = form.title.value.trim();
+      const description = form.description.value.trim();
 
-    saveBtn.addEventListener("click", async () => {
-      await updateDoc(docRef, {
-        description: gameArea.innerText
+      if (!title) {
+        messageDiv.textContent = "Please enter a game title.";
+        messageDiv.style.color = 'red';
+        return;
+      }
+
+      // Create a new game reference with a unique key
+      const gamesRef = ref(db, 'games');
+      const newGameRef = push(gamesRef);
+
+      // Set the new game data
+      set(newGameRef, {
+        title,
+        description,
+        createdAt: Date.now()
+      }).then(() => {
+        messageDiv.textContent = `Game "${title}" created successfully!`;
+        messageDiv.style.color = 'green';
+        form.reset();
+      }).catch((error) => {
+        messageDiv.textContent = 'Error creating game: ' + error.message;
+        messageDiv.style.color = 'red';
       });
-      alert("Changes saved!");
     });
-  });
-</script>
-
+  </script>
 </body>
 </html>
-
