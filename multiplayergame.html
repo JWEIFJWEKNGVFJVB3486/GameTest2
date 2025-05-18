@@ -214,12 +214,13 @@
         ctx.font = "14px Comic Sans MS";
         ctx.fillText(p.username || "?", p.x - 20, p.y - 30);
 
-        if (p.equippedHat && hatImages[p.equippedHat]) {
-          const img = hatImages[p.equippedHat];
-          if (img.complete) {
-            ctx.drawImage(img, p.x - 5, p.y - 47, 40, 40);
-          }
-        }
+       if (p.equippedHat && hatImages[p.equippedHat]) {
+  const img = hatImages[p.equippedHat];
+  if (img.complete && img.naturalWidth !== 0) { // ensure image loaded successfully
+    ctx.drawImage(img, p.x - 0, p.y - 47, 40, 40);
+  }
+}
+
 
         if (p.chat) {
           ctx.fillStyle = "white";
