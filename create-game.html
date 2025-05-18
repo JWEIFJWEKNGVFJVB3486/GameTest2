@@ -1,24 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Create Game</title>
+  <title>Edit Game Map</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       padding: 20px;
       background: #f0f8ff;
     }
-
     h1 {
       color: #333;
     }
-
     label {
       display: block;
       margin-top: 10px;
       font-weight: bold;
     }
-
     input, textarea, button, select {
       padding: 8px;
       width: 100%;
@@ -27,7 +24,6 @@
       border-radius: 6px;
       border: 1px solid #aaa;
     }
-
     button {
       background: #28a745;
       color: white;
@@ -35,11 +31,9 @@
       margin-top: 20px;
       cursor: pointer;
     }
-
     #gamesList {
       margin-top: 40px;
     }
-
     .game-item {
       background: #fff;
       padding: 10px;
@@ -47,17 +41,49 @@
       margin-bottom: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
     .edit-btn {
       background: #007bff;
       color: white;
       margin-top: 10px;
     }
+    #mapEditor {
+      margin-top: 20px;
+    }
+    #partsPalette {
+      margin-bottom: 10px;
+    }
+    .part-button {
+      padding: 8px 12px;
+      margin-right: 8px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+    }
+    .part-block {
+      width: 30px;
+      height: 30px;
+      display: inline-block;
+      margin: 2px;
+      border: 1px solid #555;
+      cursor: pointer;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(10, 32px);
+      grid-template-rows: repeat(10, 32px);
+      gap: 2px;
+      background: #ddd;
+      padding: 5px;
+      border-radius: 6px;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
 
-<h1>Create or Edit a Game</h1>
+<h1>Edit Game & Map</h1>
 
 <label for="gameName">Game Name</label>
 <input type="text" id="gameName" placeholder="My Awesome Game" />
@@ -65,17 +91,23 @@
 <label for="gameDescription">Description</label>
 <textarea id="gameDescription" rows="4" placeholder="Describe your game here..."></textarea>
 
-<button id="saveBtn">Save Game</button>
-
-<div id="gamesList">
-  <h2>Your Games</h2>
-  <div id="gamesContainer"></div>
+<div id="mapEditor">
+  <h2>Map Editor</h2>
+  <div id="partsPalette">
+    <button class="part-button" style="background: #3498db;" data-part="blue">Blue Block</button>
+    <button class="part-button" style="background: #e74c3c;" data-part="red">Red Block</button>
+    <button class="part-button" style="background: #2ecc71;" data-part="green">Green Block</button>
+    <button class="part-button" style="background: #95a5a6;" data-part="erase">Erase</button>
+  </div>
+  <div id="grid"></div>
 </div>
+
+<button id="saveBtn">Save Game & Map</button>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, doc, getDocs, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, doc, getDocs, updateDoc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -91,65 +123,143 @@
   const auth = getAuth(app);
   const firestore = getFirestore(app);
 
-  let editingGameId = null;
+  const urlParams = new URLSearchParams(window.location.search);
+  let editingGameId = urlParams.get("gameId");
 
   const nameInput = document.getElementById("gameName");
   const descInput = document.getElementById("gameDescription");
   const saveBtn = document.getElementById("saveBtn");
-  const gamesContainer = document.getElementById("gamesContainer");
+  const grid = document.getElementById("grid");
+  const partsPalette = document.getElementById("partsPalette");
 
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return window.location.href = "index.html";
-    const uid = user.uid;
-    loadGames(uid);
+  let selectedPart = "blue"; // default selected part
 
-    saveBtn.addEventListener("click", async () => {
-      const name = nameInput.value.trim();
-      const description = descInput.value.trim();
-      if (!name || !description) return alert("Please fill in all fields.");
+  // Create 10x10 grid cells
+  const GRID_SIZE = 10;
+  let cells = [];
+  for(let i=0; i<GRID_SIZE*GRID_SIZE; i++){
+    const cell = document.createElement("div");
+    cell.className = "part-block";
+    cell.dataset.index = i;
+    cell.style.backgroundColor = "#fff"; // empty by default
+    grid.appendChild(cell);
+    cells.push(cell);
+  }
 
-      if (editingGameId) {
-        const docRef = doc(firestore, "games", editingGameId);
-        await updateDoc(docRef, { name, description });
-        editingGameId = null;
-      } else {
-        await addDoc(collection(firestore, "games"), {
-          name,
-          description,
-          createdBy: uid,
-          createdAt: Date.now()
-        });
-      }
-
-      nameInput.value = "";
-      descInput.value = "";
-      loadGames(uid);
-    });
+  // Select part to place
+  partsPalette.addEventListener("click", (e) => {
+    if(e.target.classList.contains("part-button")){
+      selectedPart = e.target.dataset.part;
+      // Highlight selected button visually (optional)
+      [...partsPalette.children].forEach(btn => btn.style.opacity = "0.5");
+      e.target.style.opacity = "1";
+    }
   });
 
-  async function loadGames(uid) {
-    gamesContainer.innerHTML = "";
-    const q = query(collection(firestore, "games"), where("createdBy", "==", uid));
-    const snapshot = await getDocs(q);
+  // Place or erase part on grid click
+  grid.addEventListener("click", (e) => {
+    if(!e.target.classList.contains("part-block")) return;
+    const cell = e.target;
 
-    snapshot.forEach(docSnap => {
+    if(selectedPart === "erase"){
+      cell.style.backgroundColor = "#fff";
+      cell.dataset.part = "";
+    } else {
+      // set color depending on part type
+      const colorMap = {
+        blue: "#3498db",
+        red: "#e74c3c",
+        green: "#2ecc71"
+      };
+      cell.style.backgroundColor = colorMap[selectedPart] || "#000";
+      cell.dataset.part = selectedPart;
+    }
+  });
+
+  // Load existing game data & map parts if editing
+  async function loadGameData(gameId){
+    const docRef = doc(firestore, "games", gameId);
+    const docSnap = await getDoc(docRef);
+    if(docSnap.exists()){
       const data = docSnap.data();
-      const div = document.createElement("div");
-      div.className = "game-item";
-      div.innerHTML = `
-        <strong>${data.name}</strong><br>
-        <small>${data.description}</small><br>
-        <button class="edit-btn">Edit</button>
-      `;
+      nameInput.value = data.name || "";
+      descInput.value = data.description || "";
 
-      div.querySelector(".edit-btn").addEventListener("click", () => {
-  window.location.href = `studio.html?gameId=${docSnap.id}`;
-});
+      // Load map parts if saved
+      if(data.mapParts && Array.isArray(data.mapParts)){
+        // Clear grid first
+        cells.forEach(cell => {
+          cell.style.backgroundColor = "#fff";
+          cell.dataset.part = "";
+        });
 
-
-      gamesContainer.appendChild(div);
-    });
+        // Set saved parts
+        data.mapParts.forEach(({index, part}) => {
+          if(cells[index]){
+            const colorMap = {
+              blue: "#3498db",
+              red: "#e74c3c",
+              green: "#2ecc71"
+            };
+            cells[index].style.backgroundColor = colorMap[part] || "#000";
+            cells[index].dataset.part = part;
+          }
+        });
+      }
+    } else {
+      alert("Game not found.");
+    }
   }
+
+  // Save game + map data to Firestore
+  async function saveGameData(uid){
+    const name = nameInput.value.trim();
+    const description = descInput.value.trim();
+    if(!name || !description) return alert("Please fill in all fields.");
+
+    // Extract map parts from grid
+    const mapParts = [];
+    cells.forEach((cell, index) => {
+      if(cell.dataset.part){
+        mapParts.push({index, part: cell.dataset.part});
+      }
+    });
+
+    if(editingGameId){
+      const docRef = doc(firestore, "games", editingGameId);
+      await updateDoc(docRef, {
+        name,
+        description,
+        mapParts
+      });
+      alert("Game and map updated!");
+    } else {
+      const docRef = await addDoc(collection(firestore, "games"), {
+        name,
+        description,
+        createdBy: uid,
+        createdAt: Date.now(),
+        mapParts
+      });
+      editingGameId = docRef.id;
+      alert("Game and map created!");
+      // Optionally update URL to new gameId
+      history.replaceState(null, "", `?gameId=${editingGameId}`);
+    }
+  }
+
+  // Auth and load existing game if editing
+  onAuthStateChanged(auth, async (user) => {
+    if(!user) return window.location.href = "index.html";
+    const uid = user.uid;
+
+    if(editingGameId){
+      await loadGameData(editingGameId);
+    }
+
+    saveBtn.addEventListener("click", () => saveGameData(uid));
+  });
+
 </script>
 
 </body>
