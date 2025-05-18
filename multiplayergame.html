@@ -82,20 +82,25 @@
 
   let player = null;
   let playerRef = null;
+onValue(ref(realtimeDb, "players"), async (snapshot) => {
+  const data = snapshot.val() || {};
   const currentPlayers = {};
-for (const id in data) {
-  if (id === auth.currentUser.uid) {
-    currentPlayers[id] = player; // Preserve own player
-  } else {
-    currentPlayers[id] = { ...data[id] };
 
-    const otherUserData = await fetchUserData(id);
-    if (otherUserData) {
-      currentPlayers[id].equippedHat = otherUserData.equippedHat || "";
+  for (const id in data) {
+    if (id === auth.currentUser.uid) {
+      currentPlayers[id] = player; // Preserve own player instance
+    } else {
+      currentPlayers[id] = { ...data[id] };
+
+      const otherUserData = await fetchUserData(id);
+      if (otherUserData) {
+        currentPlayers[id].equippedHat = otherUserData.equippedHat || "";
+      }
     }
   }
-}
-players = currentPlayers;
+
+  players = currentPlayers;
+});
 
   let hatImages = {};
   let hatsMap = new Map();
