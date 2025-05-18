@@ -47,210 +47,184 @@
   <input id="chatInput" placeholder="Type your message..." maxlength="50" />
 
   <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getDatabase, ref, set, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-    authDomain: "gametest2-ba5fe.firebaseapp.com",
-    projectId: "gametest2-ba5fe",
-    storageBucket: "gametest2-ba5fe.appspot.com",
-    messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7",
-    databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com/"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
-  const realtimeDb = getDatabase(app);
-
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
-  const board = document.getElementById("board");
-  const chatInput = document.getElementById("chatInput");
-
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas();
-
-  let player = null;
-  let playerRef = null;
-onValue(ref(realtimeDb, "players"), async (snapshot) => {
-  const data = snapshot.val() || {};
-  const currentPlayers = {};
-
-  for (const id in data) {
-    if (id === auth.currentUser.uid) {
-      currentPlayers[id] = player; // preserve own reference
-    } else {
-      currentPlayers[id] = { ...data[id] };
-      const otherUserData = await fetchUserData(id);
-      if (otherUserData) {
-        currentPlayers[id].equippedHat = otherUserData.equippedHat || "";
-      }
-    }
-  }
-
-  players = currentPlayers;
-});
-
-
-  let hatImages = {};
-  let hatsMap = new Map();
-
-  async function loadHats() {
-    const hatsCol = collection(firestore, "hats");
-    const snapshot = await getDocs(hatsCol);
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      hatsMap.set(doc.id, data);
-      if (data.imageUrl) {
-        const img = new Image();
-        img.src = data.imageUrl;
-        hatImages[doc.id] = img;
-      }
-    });
-  }
-
-  async function fetchUserData(uid) {
-    const docRef = doc(firestore, "users", uid);
-    const snap = await getDoc(docRef);
-    return snap.exists() ? snap.data() : null;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const uid in players) {
-      const p = players[uid];
-      ctx.fillStyle = p.color || "#000";
-      ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
-
-
-      // Username
-      ctx.fillStyle = "black";
-      ctx.font = "14px Comic Sans MS";
-     ctx.fillText(p.username || "?", p.x - 20, p.y - 30);
-
-
-      // Hat (if any)
-     if (p.equippedHat && hatImages[p.equippedHat]) {
-  const img = hatImages[p.equippedHat];
-  if (img.complete) {
-    ctx.drawImage(img, p.x - 1, p.y - 47, 40, 40);
-
-  }
-}
-
-
-      // Speech bubble
-      if (p.chat) {
-        ctx.fillStyle = "white";
-        ctx.strokeStyle = "black";
-        ctx.font = "12px Comic Sans MS";
-        const textWidth = ctx.measureText(p.chat).width;
-        ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
-        ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
-        ctx.fillStyle = "black";
-       ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 37);
-      }
-    }
-  }
-
-  function updateLeaderboard() {
-    board.innerHTML = "";
-    for (const uid in players) {
-      const p = players[uid];
-      const li = document.createElement("li");
-      li.textContent = p.username || "?";
-      board.appendChild(li);
-    }
-  }
-
-  function loop() {
-    if (!player) return;
-    let moved = false;
-    if (keys["w"]) { player.y -= 2; moved = true; }
-    if (keys["s"]) { player.y += 2; moved = true; }
-    if (keys["a"]) { player.x -= 2; moved = true; }
-    if (keys["d"]) { player.x += 2; moved = true; }
-    if (moved) {
-      set(playerRef, player);
-    }
-    draw();
-    updateLeaderboard();
-    requestAnimationFrame(loop);
-  }
-
-  const keys = {};
-  window.addEventListener("keydown", e => {
-    keys[e.key.toLowerCase()] = true;
-    if (e.key === "Enter") {
-      if (chatInput.style.display === "none") {
-        chatInput.style.display = "block";
-        chatInput.focus();
-      } else {
-        const msg = chatInput.value.trim();
-        if (msg) {
-          player.chat = msg;
-          set(playerRef, player);
-          setTimeout(() => {
-            if (player && player.chat === msg) {
-              delete player.chat;
-              set(playerRef, player);
-            }
-          }, 4000);
-        }
-        chatInput.value = "";
-        chatInput.style.display = "none";
-      }
-    }
-  });
-  window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return window.location.href = "index.html";
-    await loadHats(); // Load hats from Firestore
-
-    const uid = user.uid;
-    const userData = await fetchUserData(uid);
-    const username = userData?.username || "Unnamed";
-
-    player = {
-      username,
-      x: Math.random() * (canvas.width - 100) + 50,
-      y: Math.random() * (canvas.height - 100) + 50,
-      color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
-      equippedHat: userData?.equippedHat || ""
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7",
+      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com/"
     };
 
-    playerRef = ref(realtimeDb, "players/" + uid);
-    set(playerRef, player);
-    onDisconnect(playerRef).remove();
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+    const realtimeDb = getDatabase(app);
 
-    onValue(ref(realtimeDb, "players"), async (snapshot) => {
-      const data = snapshot.val() || {};
-      players = {};
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const board = document.getElementById("board");
+    const chatInput = document.getElementById("chatInput");
 
-      for (const id in data) {
-        players[id] = { ...data[id] };
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 
-        const otherUserData = await fetchUserData(id);
-        if (otherUserData) {
-          players[id].equippedHat = otherUserData.equippedHat || "";
+    let player = null;
+    let playerRef = null;
+    let players = {}; // ✅ Declare players globally
+
+    let hatImages = {};
+    let hatsMap = new Map();
+
+    async function loadHats() {
+      const hatsCol = collection(firestore, "hats");
+      const snapshot = await getDocs(hatsCol);
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        hatsMap.set(doc.id, data);
+        if (data.imageUrl) {
+          const img = new Image();
+          img.src = data.imageUrl;
+          hatImages[doc.id] = img;
+        }
+      });
+    }
+
+    async function fetchUserData(uid) {
+      const docRef = doc(firestore, "users", uid);
+      const snap = await getDoc(docRef);
+      return snap.exists() ? snap.data() : null;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const uid in players) {
+        const p = players[uid];
+        ctx.fillStyle = p.color || "#000";
+        ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
+
+        ctx.fillStyle = "black";
+        ctx.font = "14px Comic Sans MS";
+        ctx.fillText(p.username || "?", p.x - 20, p.y - 30);
+
+        if (p.equippedHat && hatImages[p.equippedHat]) {
+          const img = hatImages[p.equippedHat];
+          if (img.complete) {
+            ctx.drawImage(img, p.x - 1, p.y - 47, 40, 40);
+          }
+        }
+
+        if (p.chat) {
+          ctx.fillStyle = "white";
+          ctx.strokeStyle = "black";
+          ctx.font = "12px Comic Sans MS";
+          const textWidth = ctx.measureText(p.chat).width;
+          ctx.fillRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
+          ctx.strokeRect(p.x - textWidth / 2 - 5, p.y - 50, textWidth + 10, 18);
+          ctx.fillStyle = "black";
+          ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 37);
+        }
+      }
+    }
+
+    function updateLeaderboard() {
+      board.innerHTML = "";
+      for (const uid in players) {
+        const p = players[uid];
+        const li = document.createElement("li");
+        li.textContent = p.username || "?";
+        board.appendChild(li);
+      }
+    }
+
+    function loop() {
+      if (!player) return;
+      let moved = false;
+      if (keys["w"]) { player.y -= 2; moved = true; }
+      if (keys["s"]) { player.y += 2; moved = true; }
+      if (keys["a"]) { player.x -= 2; moved = true; }
+      if (keys["d"]) { player.x += 2; moved = true; }
+      if (moved) {
+        set(playerRef, player);
+      }
+      draw();
+      updateLeaderboard();
+      requestAnimationFrame(loop);
+    }
+
+    const keys = {};
+    window.addEventListener("keydown", e => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === "Enter") {
+        if (chatInput.style.display === "none") {
+          chatInput.style.display = "block";
+          chatInput.focus();
+        } else {
+          const msg = chatInput.value.trim();
+          if (msg) {
+            player.chat = msg;
+            set(playerRef, player);
+            setTimeout(() => {
+              if (player && player.chat === msg) {
+                delete player.chat;
+                set(playerRef, player);
+              }
+            }, 4000);
+          }
+          chatInput.value = "";
+          chatInput.style.display = "none";
         }
       }
     });
+    window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    loop();
-  });
-</script>
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+      await loadHats();
 
+      const uid = user.uid;
+      const userData = await fetchUserData(uid);
+      const username = userData?.username || "Unnamed";
+
+      player = {
+        username,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: Math.random() * (canvas.height - 100) + 50,
+        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
+        equippedHat: userData?.equippedHat || ""
+      };
+
+      playerRef = ref(realtimeDb, "players/" + uid);
+      set(playerRef, player);
+      onDisconnect(playerRef).remove();
+
+      // ✅ Single onValue listener to keep player list updated
+      onValue(ref(realtimeDb, "players"), async (snapshot) => {
+        const data = snapshot.val() || {};
+        players = {};
+
+        for (const id in data) {
+          players[id] = { ...data[id] };
+          const otherUserData = await fetchUserData(id);
+          if (otherUserData) {
+            players[id].equippedHat = otherUserData.equippedHat || "";
+          }
+        }
+      });
+
+      loop();
+    });
+  </script>
 </body>
 </html>
