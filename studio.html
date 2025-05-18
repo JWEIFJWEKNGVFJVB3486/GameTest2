@@ -37,22 +37,82 @@
       cursor: se-resize;
       border-radius: 50%;
     }
+    button {
+      margin-right: 10px;
+    }
   </style>
 </head>
 <body>
 
 <div id="toolbar">
   <button id="addSquareBtn">Add Square</button>
+  <button id="saveBtn">Save</button>
+  <button id="backBtn">Back to Create Game</button>
 </div>
 
 <div id="canvas"></div>
 
-<script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, doc, getDoc, updateDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.firebasestorage.app",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
+};
+
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
   const canvas = document.getElementById("canvas");
   const addSquareBtn = document.getElementById("addSquareBtn");
+  const saveBtn = document.getElementById("saveBtn");
+  const backBtn = document.getElementById("backBtn");
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get("gameId");
+  let unsavedChanges = false;
 
   addSquareBtn.addEventListener("click", () => {
     createShape(50, 50, 100, 100);
+    unsavedChanges = true;
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    const shapeData = [];
+    const shapes = document.querySelectorAll(".shape");
+
+    shapes.forEach(shape => {
+      shapeData.push({
+        x: parseInt(shape.style.left),
+        y: parseInt(shape.style.top),
+        width: parseInt(shape.style.width),
+        height: parseInt(shape.style.height)
+      });
+    });
+
+    const gameRef = doc(db, "games", gameId);
+    await updateDoc(gameRef, { shapes: shapeData });
+    unsavedChanges = false;
+    alert("Game saved!");
+  });
+
+  backBtn.addEventListener("click", () => {
+    if (unsavedChanges) {
+      const confirmLeave = confirm("You have unsaved changes. Are you sure you want to leave?");
+      if (!confirmLeave) return;
+    }
+    window.location.href = "create-game.html";
   });
 
   function createShape(x, y, width, height) {
@@ -65,12 +125,9 @@
 
     // Make shape draggable
     makeDraggable(shape);
-
-    // Add resizer handle
     const resizer = document.createElement("div");
     resizer.classList.add("resizer");
     shape.appendChild(resizer);
-
     makeResizable(shape, resizer);
 
     canvas.appendChild(shape);
@@ -81,7 +138,7 @@
     let startX, startY, origX, origY;
 
     element.addEventListener("mousedown", (e) => {
-      if (e.target.classList.contains("resizer")) return; // Ignore dragging if resizing
+      if (e.target.classList.contains("resizer")) return;
 
       isDragging = true;
       startX = e.clientX;
@@ -95,8 +152,9 @@
       if (!isDragging) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      element.style.left = origX + dx + "px";
-      element.style.top = origY + dy + "px";
+      element.style.left = (origX + dx) + "px";
+      element.style.top = (origY + dy) + "px";
+      unsavedChanges = true;
     });
 
     window.addEventListener("mouseup", () => {
@@ -110,7 +168,7 @@
     let startX, startY, startWidth, startHeight;
 
     resizer.addEventListener("mousedown", (e) => {
-      e.stopPropagation(); // Prevent dragging
+      e.stopPropagation();
       isResizing = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -125,6 +183,7 @@
       const dy = e.clientY - startY;
       element.style.width = (startWidth + dx) + "px";
       element.style.height = (startHeight + dy) + "px";
+      unsavedChanges = true;
     });
 
     window.addEventListener("mouseup", () => {
@@ -132,6 +191,22 @@
       document.body.style.userSelect = "";
     });
   }
+
+  // Load existing shapes
+  window.addEventListener("DOMContentLoaded", async () => {
+    if (!gameId) return alert("No game ID found in URL!");
+
+    const docRef = doc(db, "games", gameId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (Array.isArray(data.shapes)) {
+        data.shapes.forEach(shape => {
+          createShape(shape.x, shape.y, shape.width, shape.height);
+        });
+      }
+    }
+  });
 </script>
 
 </body>
