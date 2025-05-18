@@ -143,10 +143,9 @@
       `;
 
       div.querySelector(".edit-btn").addEventListener("click", () => {
-        nameInput.value = data.name;
-        descInput.value = data.description;
-        editingGameId = docSnap.id;
-      });
+  window.location.href = `studio.html?gameId=${docSnap.id}`;
+});
+
 
       gamesContainer.appendChild(div);
     });
