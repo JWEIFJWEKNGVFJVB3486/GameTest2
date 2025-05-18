@@ -121,7 +121,8 @@
       // Hat (if any)
       if (p.equippedHat && hatImages[p.equippedHat]) {
         const img = hatImages[p.equippedHat];
-        ctx.drawImage(img, p.x - 12, p.y - 50, 24, 24);
+        ctx.drawImage(hatImage, p.x - 10, p.y - 25, 20, 20); // Moves hat down
+
       }
 
       // Speech bubble
