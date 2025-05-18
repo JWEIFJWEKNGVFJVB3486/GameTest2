@@ -108,18 +108,20 @@
       const description = descInput.value.trim();
       if (!name || !description) return alert("Please fill in all fields.");
 
-      if (editingGameId) {
-        const docRef = doc(firestore, "games", editingGameId);
-        await updateDoc(docRef, { name, description });
-        editingGameId = null;
-      } else {
-        await addDoc(collection(firestore, "games"), {
-          name,
-          description,
-          createdBy: uid,
-          createdAt: Date.now()
-        });
-      }
+     if (editingGameId) {
+  const docRef = doc(firestore, "games", editingGameId);
+  await updateDoc(docRef, { name, description });
+  window.location.href = `studio.html?gameId=${editingGameId}`;
+} else {
+  const docRef = await addDoc(collection(firestore, "games"), {
+    name,
+    description,
+    createdBy: uid,
+    createdAt: Date.now()
+  });
+  window.location.href = `studio.html?gameId=${docRef.id}`;
+}
+
 
       nameInput.value = "";
       descInput.value = "";
