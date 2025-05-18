@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f8ff;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, textarea, button, select {
+      padding: 8px;
+      width: 100%;
+      margin-top: 5px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+    }
+
+    button {
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    #gamesList {
+      margin-top: 40px;
+    }
+
+    .game-item {
+      background: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .edit-btn {
+      background: #007bff;
+      color: white;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Create or Edit a Game</h1>
+
+<label for="gameName">Game Name</label>
+<input type="text" id="gameName" placeholder="My Awesome Game" />
+
+<label for="gameDescription">Description</label>
+<textarea id="gameDescription" rows="4" placeholder="Describe your game here..."></textarea>
+
+<button id="saveBtn">Save Game</button>
+
+<div id="gamesList">
+  <h2>Your Games</h2>
+  <div id="gamesContainer"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, doc, getDocs, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+
+  let editingGameId = null;
+
+  const nameInput = document.getElementById("gameName");
+  const descInput = document.getElementById("gameDescription");
+  const saveBtn = document.getElementById("saveBtn");
+  const gamesContainer = document.getElementById("gamesContainer");
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return window.location.href = "index.html";
+    const uid = user.uid;
+    loadGames(uid);
+
+    saveBtn.addEventListener("click", async () => {
+      const name = nameInput.value.trim();
+      const description = descInput.value.trim();
+      if (!name || !description) return alert("Please fill in all fields.");
+
+      if (editingGameId) {
+        const docRef = doc(firestore, "games", editingGameId);
+        await updateDoc(docRef, { name, description });
+        editingGameId = null;
+      } else {
+        await addDoc(collection(firestore, "games"), {
+          name,
+          description,
+          createdBy: uid,
+          createdAt: Date.now()
+        });
+      }
+
+      nameInput.value = "";
+      descInput.value = "";
+      loadGames(uid);
+    });
+  });
+
+  async function loadGames(uid) {
+    gamesContainer.innerHTML = "";
+    const q = query(collection(firestore, "games"), where("createdBy", "==", uid));
+    const snapshot = await getDocs(q);
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className = "game-item";
+      div.innerHTML = `
+        <strong>${data.name}</strong><br>
+        <small>${data.description}</small><br>
+        <button class="edit-btn">Edit</button>
+      `;
+
+      div.querySelector(".edit-btn").addEventListener("click", () => {
+        nameInput.value = data.name;
+        descInput.value = data.description;
+        editingGameId = docSnap.id;
+      });
+
+      gamesContainer.appendChild(div);
+    });
+  }
+</script>
+
+</body>
+</html>
