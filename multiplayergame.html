@@ -53,6 +53,23 @@
       touch-action: none;
     }
 
+    #chatButton {
+  width: 40px;
+  height: 40px;
+  background: #4448;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  order: 5; /* To place it after arrows */
+  margin-left: 10px;
+}
+
     /* Arrow buttons */
     .arrow-button {
       width: 40px;
@@ -103,6 +120,7 @@
 
   <!-- Mobile controls -->
   <div id="mobileControls" aria-label="Movement controls" role="group">
+<div id="chatButton" class="arrow-button" aria-label="Toggle chat">💬</div>
     <div id="arrowUp" class="arrow-button" aria-label="Move up">▲</div>
     <div id="arrowLeft" class="arrow-button" aria-label="Move left">◄</div>
     <div id="arrowDown" class="arrow-button" aria-label="Move down">▼</div>
@@ -307,6 +325,38 @@
       });
     }
 
+    const chatButton = document.getElementById("chatButton");
+
+chatButton.addEventListener("touchstart", e => {
+  e.preventDefault();
+  toggleChatInput();
+});
+chatButton.addEventListener("mousedown", e => {
+  e.preventDefault();
+  toggleChatInput();
+});
+
+function toggleChatInput() {
+  if (chatInput.style.display === "none") {
+    chatInput.style.display = "block";
+    chatInput.focus();
+  } else {
+    const msg = chatInput.value.trim();
+    if (msg) {
+      player.chat = msg;
+      set(playerRef, player);
+      setTimeout(() => {
+        if (player && player.chat === msg) {
+          delete player.chat;
+          set(playerRef, player);
+        }
+      }, 4000);
+    }
+    chatInput.value = "";
+    chatInput.style.display = "none";
+  }
+}
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       await loadHats();
@@ -348,6 +398,9 @@
 
       loop();
     });
+
+    
+    
   </script>
 </body>
 </html>
