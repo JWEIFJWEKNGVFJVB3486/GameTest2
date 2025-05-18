@@ -1,67 +1,31 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Simple Game Editor</title>
+  <title>Game Studio</title>
   <style>
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #toolbar {
-      background: #222;
-      color: white;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #gameTitle {
-      font-weight: bold;
-    }
-    #buttons button {
-      margin-left: 10px;
-      padding: 6px 12px;
-      font-size: 14px;
-    }
-    #gameArea {
-      position: relative;
-      width: 100vw;
-      height: calc(100vh - 50px);
-      background: #eee;
-      overflow: hidden;
-    }
-    .part {
-      position: absolute;
-      background-color: rgba(0, 120, 215, 0.7);
-      border: 2px solid #0078d7;
-      cursor: move;
-      user-select: none;
-    }
-    .resize-handle {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: #005a9e;
-      right: 0;
-      bottom: 0;
-      cursor: nwse-resize;
-    }
+    body { margin: 0; font-family: Arial; }
+    #toolbar { padding: 10px; background: #222; color: white; }
+    #editor { height: calc(100vh - 40px); background: #f0f0f0; display: flex; align-items: center; justify-content: center; }
+    #gameArea { width: 600px; height: 400px; background: white; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
 
 <div id="toolbar">
-  <div id="gameTitle">Loading game...</div>
-  <div id="buttons">
-    <button id="addPartBtn">Add Part</button>
-    <button id="saveBtn">Save</button>
-    <button id="playtestBtn">Playtest</button>
+  <span id="gameTitle">Loading...</span>
+  <button id="saveBtn" style="float:right;">Save Changes</button>
+</div>
+
+<div id="editor">
+  <div id="gameArea" contenteditable="true">
+    <!-- You can edit the contents visually here -->
   </div>
 </div>
 
-<div id="gameArea"></div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -74,228 +38,32 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const firestore = getFirestore(app);
   const auth = getAuth(app);
+  const firestore = getFirestore(app);
 
-  // Get gameId from URL param ?gameId=abc123
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
 
   const gameTitle = document.getElementById("gameTitle");
   const gameArea = document.getElementById("gameArea");
-  const addPartBtn = document.getElementById("addPartBtn");
   const saveBtn = document.getElementById("saveBtn");
-  const playtestBtn = document.getElementById("playtestBtn");
 
-  // Parts data loaded/saved from Firestore
-  let parts = [];
-
-  // Check user logged in before loading game
-  onAuthStateChanged(auth, user => {
-    if (!user) {
-      alert("Please login to use the editor");
-      return;
-    }
-    if (!gameId) {
-      alert("No gameId provided in URL");
-      return;
-    }
-    loadGame();
-  });
-
-  // Load game parts from Firestore
-  async function loadGame() {
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return location.href = "index.html";
     const docRef = doc(firestore, "games", gameId);
     const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) {
-      alert("Game not found in Firestore");
-      return;
-    }
+    if (!docSnap.exists()) return alert("Game not found!");
+
     const data = docSnap.data();
-    gameTitle.textContent = data.name || "Untitled Game";
-    parts = data.parts || [];
-    renderParts();
-  }
+    gameTitle.textContent = data.name;
+    gameArea.innerText = data.description; // You could make this a custom scene in the future
 
-  // Render all parts in editor area
-  function renderParts() {
-    gameArea.innerHTML = "";
-    parts.forEach((part, index) => {
-      const div = document.createElement("div");
-      div.classList.add("part");
-      div.style.left = part.x + "px";
-      div.style.top = part.y + "px";
-      div.style.width = part.width + "px";
-      div.style.height = part.height + "px";
-      div.textContent = `Part ${index + 1}`;
-
-      // Add resize handle
-      const resizeHandle = document.createElement("div");
-      resizeHandle.classList.add("resize-handle");
-      div.appendChild(resizeHandle);
-
-      // Dragging variables
-      let drag = null;
-      let resize = null;
-
-      // Drag move
-      div.addEventListener("mousedown", e => {
-        if (e.target === resizeHandle) return; // Don't drag when resizing
-        drag = { x: e.clientX, y: e.clientY, left: div.offsetLeft, top: div.offsetTop };
-        e.preventDefault();
+    saveBtn.addEventListener("click", async () => {
+      await updateDoc(docRef, {
+        description: gameArea.innerText
       });
-
-      // Resize
-      resizeHandle.addEventListener("mousedown", e => {
-        resize = { x: e.clientX, y: e.clientY, width: div.offsetWidth, height: div.offsetHeight };
-        e.preventDefault();
-        e.stopPropagation();
-      });
-
-      window.addEventListener("mousemove", e => {
-        if (drag) {
-          let dx = e.clientX - drag.x;
-          let dy = e.clientY - drag.y;
-          let newX = drag.left + dx;
-          let newY = drag.top + dy;
-          // Keep inside gameArea
-          newX = Math.max(0, Math.min(gameArea.clientWidth - div.offsetWidth, newX));
-          newY = Math.max(0, Math.min(gameArea.clientHeight - div.offsetHeight, newY));
-          div.style.left = newX + "px";
-          div.style.top = newY + "px";
-        }
-        if (resize) {
-          let dx = e.clientX - resize.x;
-          let dy = e.clientY - resize.y;
-          let newW = Math.max(20, resize.width + dx);
-          let newH = Math.max(20, resize.height + dy);
-          // Keep size inside gameArea
-          newW = Math.min(newW, gameArea.clientWidth - div.offsetLeft);
-          newH = Math.min(newH, gameArea.clientHeight - div.offsetTop);
-          div.style.width = newW + "px";
-          div.style.height = newH + "px";
-        }
-      });
-
-      window.addEventListener("mouseup", () => {
-        if (drag) {
-          drag = null;
-          savePartsFromDOM();
-        }
-        if (resize) {
-          resize = null;
-          savePartsFromDOM();
-        }
-      });
-
-      gameArea.appendChild(div);
+      alert("Changes saved!");
     });
-  }
-
-  // Save all parts info from DOM elements back to parts array
-  function savePartsFromDOM() {
-    parts = [];
-    gameArea.querySelectorAll(".part").forEach(div => {
-      parts.push({
-        x: div.offsetLeft,
-        y: div.offsetTop,
-        width: div.offsetWidth,
-        height: div.offsetHeight
-      });
-    });
-  }
-
-  // Add a new part to parts array and render it
-  addPartBtn.addEventListener("click", () => {
-    parts.push({ x: 50, y: 50, width: 120, height: 60 });
-    renderParts();
-  });
-
-  // Save parts array to Firestore
-  saveBtn.addEventListener("click", async () => {
-    savePartsFromDOM();
-    try {
-      const docRef = doc(firestore, "games", gameId);
-      await updateDoc(docRef, { parts });
-      alert("Saved successfully!");
-    } catch (e) {
-      alert("Save failed: " + e.message);
-    }
-  });
-
-  // Playtest mode: open new window with simple player and parts collision
-  playtestBtn.addEventListener("click", () => {
-    savePartsFromDOM();
-    if (parts.length === 0) {
-      alert("Add parts before playtesting.");
-      return;
-    }
-    const playWindow = window.open("", "Playtest", "width=600,height=400");
-    playWindow.document.write(`
-      <!DOCTYPE html>
-      <html><head><title>Playtest</title>
-      <style>
-        body,html { margin:0; height:100%; background:#eee; overflow:hidden; }
-        #gameArea {
-          position:relative; width:100vw; height:100vh; background:#fff;
-        }
-        .part {
-          position:absolute; background:rgba(0,120,215,0.7);
-          border:2px solid #0078d7;
-          box-sizing:border-box;
-        }
-        #player {
-          position:absolute; width:30px; height:30px; background:red; border-radius:4px;
-          top:10px; left:10px;
-        }
-      </style>
-      </head><body>
-        <div id="gameArea"></div>
-        <div id="player"></div>
-        <script>
-          const parts = ${JSON.stringify(parts)};
-          const gameArea = document.getElementById("gameArea");
-          const player = document.getElementById("player");
-          let pos = { x: 10, y: 10 };
-          const speed = 5;
-
-          // Create part divs
-          parts.forEach(p => {
-            const d = document.createElement("div");
-            d.className = "part";
-            d.style.left = p.x + "px";
-            d.style.top = p.y + "px";
-            d.style.width = p.width + "px";
-            d.style.height = p.height + "px";
-            gameArea.appendChild(d);
-          });
-
-          // Simple rectangle collision detection
-          function collides(x,y) {
-            return parts.some(p => {
-              return !(x + 30 < p.x || x > p.x + p.width || y + 30 < p.y || y > p.y + p.height);
-            });
-          }
-
-          window.addEventListener("keydown", e => {
-            let newX = pos.x;
-            let newY = pos.y;
-            if (e.key === "a") newX -= speed;
-            else if (e.key === "d") newX += speed;
-            else if (e.key === "w") newY -= speed;
-            else if (e.key === "s") newY += speed;
-
-            if (!collides(newX, newY)) {
-              pos.x = newX;
-              pos.y = newY;
-              player.style.left = pos.x + "px";
-              player.style.top = pos.y + "px";
-            }
-          });
-        </script>
-      </body></html>
-    `);
-    playWindow.document.close();
   });
 </script>
 
