@@ -114,41 +114,42 @@
     const db = getFirestore(app);
     let currentUserUid = null;
 
-    onAuthStateChanged(auth, async (user) => {
-      const userInfo = document.getElementById("user-info");
-      if (user) {
-        currentUserUid = user.uid;
+   onAuthStateChanged(auth, async (user) => {
+  const userInfo = document.getElementById("user-info");
+  if (user) {
+    currentUserUid = user.uid;
 
-        document.getElementById("profile-btn").onclick = () => {
-          window.location.href = profile.html?uid=${user.uid};
-        };
+    document.getElementById("profile-btn").onclick = () => {
+      window.location.href = `profile.html?uid=${user.uid}`;
+    };
 
-        const userRef = doc(db, "users", user.uid);
-        try {
-          const docSnap = await getDoc(userRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.cubeBucks === undefined) {
-              await setDoc(userRef, { cubeBucks: 0 }, { merge: true });
-              data.cubeBucks = 0;
-            }
-
-            userInfo.innerHTML = 
-               ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
-              Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
-              <button onclick="logout()">Logout</button>
-            ;
-          } else {
-            userInfo.textContent = "User data not found.";
-          }
-        } catch (err) {
-          console.error("Error getting user data:", err);
-          userInfo.textContent = "Error loading data.";
+    const userRef = doc(db, "users", user.uid);
+    try {
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.cubeBucks === undefined) {
+          await setDoc(userRef, { cubeBucks: 0 }, { merge: true });
+          data.cubeBucks = 0;
         }
+
+        userInfo.innerHTML = `
+          ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
+          Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
+          <button onclick="logout()">Logout</button>
+        `;
       } else {
-        window.location.href = "index.html";
+        userInfo.textContent = "User data not found.";
       }
-    });
+    } catch (err) {
+      console.error("Error getting user data:", err);
+      userInfo.textContent = "Error loading data.";
+    }
+  } else {
+    window.location.href = "index.html";
+  }
+});
+
 
     window.logout = function () {
       signOut(auth).then(() => {
