@@ -9,6 +9,39 @@
       background-color: #f0ffe5;
       margin: 0;
       padding: 0;
+    }
+
+    .header {
+      background: #e0f2d8;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #4CAF50;
+    }
+
+    .header .right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .header button {
+      background: #ffb6c1;
+      color: black;
+      padding: 8px 12px;
+      border: 2px solid #ff69b4;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 0;
+    }
+
+    .header p {
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .main {
       display: flex;
     }
 
@@ -29,7 +62,7 @@
       border: 2px solid #4CAF50;
       cursor: pointer;
       font-size: 16px;
-      border-radius: 0; /* no roundness */
+      border-radius: 0;
     }
 
     .content {
@@ -96,41 +129,26 @@
       background: #eee;
       border: 1px solid #ccc;
     }
-
-    .top-left {
-      text-align: left;
-      margin-bottom: 20px;
-    }
-
-    .top-left p {
-      font-weight: bold;
-      margin: 0 0 10px 0;
-    }
-
-    .top-left button {
-      background: #ffb6c1;
-      color: black;
-      padding: 8px 12px;
-      border: 2px solid #ff69b4;
-      cursor: pointer;
-      font-size: 14px;
-      border-radius: 0;
-    }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <div class="top-left">
+  <div class="header">
+    <h1>BrickBugs Shop</h1>
+    <div class="right">
       <p id="cube-bucks-display">Cube Bucks: 0</p>
       <button onclick="window.location.href='home.html'">Home</button>
     </div>
-    <button onclick="setTab('hat')">Hats</button>
-    <button onclick="setTab('face')">Faces</button>
   </div>
 
-  <div class="content">
-    <h1>BrickBugs Shop</h1>
-    <div id="shop-container"></div>
+  <div class="main">
+    <div class="sidebar">
+      <button id="hats-tab">Hats</button>
+      <button id="faces-tab">Faces</button>
+    </div>
+
+    <div class="content">
+      <div id="shop-container"></div>
+    </div>
   </div>
 
   <div id="item-modal">
@@ -166,6 +184,16 @@
     let currentUserUid = null;
     let currentTab = "hat"; // Default to hats
 
+    document.getElementById("hats-tab").addEventListener("click", () => {
+      currentTab = "hat";
+      renderShop();
+    });
+
+    document.getElementById("faces-tab").addEventListener("click", () => {
+      currentTab = "face";
+      renderShop();
+    });
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       currentUserUid = user.uid;
@@ -175,21 +203,13 @@
     async function getAllHatsFromFirestore() {
       const hatsCol = collection(db, "hats");
       const snapshot = await getDocs(hatsCol);
-      const hats = [];
-      snapshot.forEach(doc => {
-        hats.push({ id: doc.id, ...doc.data(), type: "hat" });
-      });
-      return hats;
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "hat" }));
     }
 
     async function getAllFacesFromFirestore() {
       const facesCol = collection(db, "faces");
       const snapshot = await getDocs(facesCol);
-      const faces = [];
-      snapshot.forEach(doc => {
-        faces.push({ id: doc.id, ...doc.data(), type: "face" });
-      });
-      return faces;
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: "face" }));
     }
 
     async function renderShop() {
@@ -205,12 +225,7 @@
 
       document.getElementById("cube-bucks-display").textContent = `Cube Bucks: ${cubeBucks}`;
 
-      let allItems = [];
-      if (currentTab === "hat") {
-        allItems = await getAllHatsFromFirestore();
-      } else {
-        allItems = await getAllFacesFromFirestore();
-      }
+      let allItems = currentTab === "hat" ? await getAllHatsFromFirestore() : await getAllFacesFromFirestore();
 
       allItems.forEach(item => {
         const div = document.createElement("div");
@@ -224,11 +239,6 @@
         div.onclick = () => openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef);
         container.appendChild(div);
       });
-    }
-
-    function setTab(type) {
-      currentTab = type;
-      renderShop();
     }
 
     function openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef) {
