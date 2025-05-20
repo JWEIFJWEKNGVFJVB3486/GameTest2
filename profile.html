@@ -158,6 +158,7 @@
     let currentProfileUid = null;
     let currentProfileData = null;
     let hatsMap = new Map(); // id => hat data
+    let facesMap = new Map(); // id => face data
 
     document.addEventListener("DOMContentLoaded", () => {
       const searchBtn = document.getElementById("searchBtn");
@@ -174,13 +175,21 @@
     });
 
     async function loadHats() {
-      const hatsCol = collection(db, "hats");
-      const snapshot = await getDocs(hatsCol);
-      hatsMap.clear();
-      snapshot.forEach(doc => {
-        hatsMap.set(doc.id, doc.data());
-      });
-    }
+  const hatsCol = collection(db, "hats");
+  const hatsSnapshot = await getDocs(hatsCol);
+  hatsMap.clear();
+  hatsSnapshot.forEach(doc => {
+    hatsMap.set(doc.id, doc.data());
+  });
+
+  const facesCol = collection(db, "faces");
+  const facesSnapshot = await getDocs(facesCol);
+  facesMap.clear();
+  facesSnapshot.forEach(doc => {
+    facesMap.set(doc.id, doc.data());
+  });
+}
+
 
     window.searchByUsername = async function () {
       const username = document.getElementById("usernameInput").value.trim();
@@ -201,25 +210,33 @@
       loadProfile();
     };
 
-    function renderAvatar(data) {
-      const avatarColor = data.avatarColor || "#3498db";
-      const equippedHatId = data.equippedHat || "";
-      const faceUrl = data.faceUrl || "";
+   function renderAvatar(data) {
+  const avatarColor = data.avatarColor || "#3498db";
+  const equippedHatId = data.equippedHat || "";
+  const equippedFaceId = data.equippedFace || "";
 
-      let hatImgSrc = "";
-      if (equippedHatId && hatsMap.has(equippedHatId)) {
-        const hat = hatsMap.get(equippedHatId);
-        hatImgSrc = hat.imageUrl || "";
-      }
+  let hatImgSrc = "";
+  if (equippedHatId && hatsMap.has(equippedHatId)) {
+    const hat = hatsMap.get(equippedHatId);
+    hatImgSrc = hat.imageUrl || "";
+  }
 
-      return `
-        <div class="avatar-container">
-          <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
-          ${faceUrl ? `<img src="${faceUrl}" alt="Face" class="avatar-face" />` : ""}
-          ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
-        </div>
-      `;
-    }
+  let faceImgSrc = "";
+  if (equippedFaceId && facesMap.has(equippedFaceId)) {
+    const face = facesMap.get(equippedFaceId);
+    faceImgSrc = face.imageUrl || "";
+  } else {
+    faceImgSrc = "https://i.imgur.com/LJxWQyZ.png"; // default face
+  }
+
+  return `
+    <div class="avatar-container">
+      <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
+      <img src="${faceImgSrc}" alt="Face" class="avatar-face" />
+      ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
+    </div>
+  `;
+}
 
     async function loadProfile() {
       const data = currentProfileData;
