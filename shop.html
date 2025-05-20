@@ -234,27 +234,33 @@
     }
 
     function render2DAvatarPreview(item) {
-      const canvas = document.getElementById("avatar-preview");
-      const ctx = canvas.getContext("2d");
+  const canvas = document.getElementById("avatar-preview");
+  const ctx = canvas.getContext("2d");
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw gray cube (square)
-      ctx.fillStyle = "#888";
-      ctx.fillRect(50, 50, 100, 100);
+  // Player position on canvas
+  const p = { x: 100, y: 100 }; // Center of canvas
 
-      // Load image on top
-      const img = new Image();
-      img.src = item.imageUrl;
-      img.onload = () => {
-        if (item.type === "face") {
-          ctx.drawImage(img, 50, 50, 100, 100); // Face as texture
-        } else if (item.type === "hat") {
-          ctx.drawImage(img, 65, 25, 70, 40); // Hat above the cube
-        }
-      };
+  // Draw gray cube
+  ctx.fillStyle = "#888";
+  ctx.fillRect(p.x - 25, p.y - 25, 50, 50); // 50x50 gray cube centered on (p.x, p.y)
+
+  // Load image and draw if loaded properly
+  const img = new Image();
+  img.src = item.imageUrl;
+  img.onload = () => {
+    if (item.type === "face") {
+      // Face goes directly on the cube
+      ctx.drawImage(img, p.x - 25, p.y - 25, 50, 50);
+    } else if (item.type === "hat") {
+      // Hat floats above the cube
+      ctx.drawImage(img, p.x - 18, p.y - 43, 40, 40);
     }
+  };
+}
+
   </script>
 </body>
 </html>
