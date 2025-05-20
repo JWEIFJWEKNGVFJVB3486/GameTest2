@@ -166,6 +166,7 @@
     let players = {};
     let hatImages = {};
     let hatsMap = new Map();
+    let faceImages = {};
 
     async function loadHats() {
       const hatsCol = collection(firestore, "hats");
@@ -181,11 +182,30 @@
       });
     }
 
-    async function fetchUserData(uid) {
-      const docRef = doc(firestore, "users", uid);
-      const snap = await getDoc(docRef);
-      return snap.exists() ? snap.data() : null;
+   async function fetchUserData(uid) {
+  const docRef = doc(firestore, "users", uid);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return null;
+
+  const data = snap.data();
+
+  if (data.equippedHat && !hatImages[uid]) {
+    const hatImg = new Image();
+    hatImg.src = data.equippedHat; // Or lookup from hats collection if needed
+    hatImages[uid] = hatImg;
+  }
+
+  if (data.equippedFace && !faceImages[uid]) {
+    const faceDoc = await getDoc(doc(firestore, "faces", data.equippedFace));
+    if (faceDoc.exists()) {
+      const faceImg = new Image();
+      faceImg.src = faceDoc.data().imageUrl;
+      faceImages[uid] = faceImg;
     }
+  }
+
+  return data;
+}
 
     function handlePlayerUpdate(id, data) {
       players[id] = {
@@ -210,9 +230,15 @@
         ctx.fillStyle = p.color || "#000";
         ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
 
+        
         ctx.fillStyle = "black";
         ctx.font = "14px Comic Sans MS";
         ctx.fillText(p.username || "?", p.x - 20, p.y - 30);
+
+        const faceImg = faceImages[uid];
+if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
+  ctx.drawImage(faceImg, p.x - 15, p.y - 15, 30, 30); // Adjust position/size as needed
+}
 
        if (p.equippedHat && hatImages[p.equippedHat]) {
   const img = hatImages[p.equippedHat];
