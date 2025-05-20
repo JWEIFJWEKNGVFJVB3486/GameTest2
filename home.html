@@ -2,129 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BrickBugs Home</title>
   <style>
-    /* Reset and basics */
-    * {
-      box-sizing: border-box;
-      border-radius: 0 !important; /* no rounding */
-    }
     body {
       margin: 0;
-      font-family: Arial, Verdana, sans-serif;
-      background: #f2f2f2;
-      color: #333;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      background: #d9f5c8;
     }
 
-    /* Navbar */
     .navbar {
-      background-color: #3366cc; /* classic blue */
+      background: #4CAF50;
       color: white;
+      padding: 15px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px 20px;
-      font-weight: bold;
-      font-size: 18px;
-      border-bottom: 3px solid #274b8f;
+      font-size: 1.5em;
+      border-bottom: 3px solid #388e3c;
     }
 
     .logo {
-      user-select: none;
+      font-weight: bold;
     }
 
     .user-info {
-      font-size: 14px;
+      font-size: 0.9em;
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    /* Buttons container */
     .content {
-      max-width: 960px;
-      margin: 30px auto;
-      background: white;
-      border: 2px solid #ccc;
-      padding: 20px 30px;
+      padding: 30px;
+      text-align: center;
     }
 
     h2 {
-      color: #3366cc;
-      margin-top: 0;
-      user-select: none;
+      color: #388e3c;
     }
 
     p {
-      font-size: 16px;
-      margin-bottom: 20px;
-      user-select: none;
+      font-size: 1.1em;
     }
 
-    /* Buttons */
     button {
-      background-color: #3366cc;
-      border: 2px solid #274b8f;
-      color: white;
-      font-weight: bold;
-      font-size: 14px;
-      padding: 8px 16px;
-      margin: 6px 4px 6px 0;
+      background: #a2e57b;
+      color: black;
+      border: 2px solid #4CAF50;
+      padding: 12px 18px;
       cursor: pointer;
-      text-transform: uppercase;
-      user-select: none;
-      display: inline-block;
-      box-shadow: none;
-      /* no border-radius */
+      border-radius: 10px;
+      margin: 8px;
+      font-size: 1em;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
     }
+
     button:hover {
-      background-color: #274b8f;
-      border-color: #1b2f5b;
+      background: #c2f0a4;
     }
 
     #earn-btn {
-      background-color: #28a745;
-      border-color: #1e7e34;
+      background: #66bb6a;
       color: white;
-    }
-    #earn-btn:hover {
-      background-color: #1e7e34;
     }
 
     #profile-btn {
-      background-color: #ffcc00;
-      border-color: #b38f00;
+      background: #ffb6c1;
       color: black;
-    }
-    #profile-btn:hover {
-      background-color: #b38f00;
-      color: white;
-    }
-
-    /* Links look like old Roblox */
-    a {
-      color: #3366cc;
-      text-decoration: none;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-
-    /* Logout button inline style */
-    .logout-btn {
-      background: transparent;
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-weight: normal;
-      font-size: 12px;
-      padding: 0;
-      margin-left: 12px;
-      text-decoration: underline;
-    }
-    .logout-btn:hover {
-      color: #ccc;
     }
   </style>
 </head>
@@ -141,8 +87,8 @@
     <button onclick="window.location.href='multiplayergame.html'">Play Cube Sandbox</button>
     <button onclick="window.location.href='forums.html'">Forums</button>
     <button onclick="window.location.href='shop.html'">Shop</button>
-    <button onclick="window.location.href='avatar.html'">Customize your avatar</button>
-    <button onclick="window.location.href='create-game.html'">Create a game</button>
+   <button onclick="window.location.href='avatar.html'">Customize your avatar</button>
+   <button onclick="window.location.href='create-game.html'">Create a game</button>
     <button onclick="window.location.href='all-games.html'">User Created Games</button>
     <button id="profile-btn">Search A Profile</button>
   </div>
@@ -174,7 +120,7 @@
         currentUserUid = user.uid;
 
         document.getElementById("profile-btn").onclick = () => {
-          window.location.href = `profile.html?uid=${user.uid}`;
+          window.location.href = profile.html?uid=${user.uid};
         };
 
         const userRef = doc(db, "users", user.uid);
@@ -187,11 +133,11 @@
               data.cubeBucks = 0;
             }
 
-            userInfo.innerHTML = `
-              ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
+            userInfo.innerHTML = 
+               ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
               Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
-              <button class="logout-btn" onclick="logout()">Logout</button>
-            `;
+              <button onclick="logout()">Logout</button>
+            ;
           } else {
             userInfo.textContent = "User data not found.";
           }
