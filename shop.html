@@ -48,45 +48,30 @@
       cursor: pointer;
     }
 
-    /* Modal styles */
+    /* Modal styling */
     #item-modal {
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
       display: none;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-content {
+      position: fixed;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
       background: white;
-      border-radius: 10px;
       padding: 20px;
-      text-align: center;
+      border: 3px solid #4CAF50;
+      border-radius: 10px;
+      z-index: 999;
       width: 300px;
-      position: relative;
+      text-align: center;
     }
 
-    .modal-content img {
+    #item-modal img {
       width: 100px;
       height: 100px;
-      border-radius: 8px;
+      margin-bottom: 10px;
     }
 
-    #modal-close {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      cursor: pointer;
-      font-size: 24px;
-    }
-
-    #modal-buy-button {
-      margin-top: 15px;
+    #item-modal button {
+      margin-top: 10px;
       background-color: #66bb6a;
       color: white;
       border: none;
@@ -95,9 +80,11 @@
       cursor: pointer;
     }
 
-    #modal-buy-button:disabled {
-      background-color: #aaa;
-      cursor: default;
+    #avatar-preview {
+      margin: 10px auto;
+      display: block;
+      border: 1px solid #ccc;
+      background: #eee;
     }
   </style>
 </head>
@@ -108,16 +95,15 @@
   <h1>BrickBugs Hat Shop</h1>
   <div id="shop-container"></div>
 
-  <!-- Modal -->
+  <!-- Item preview modal -->
   <div id="item-modal">
-    <div class="modal-content">
-      <span id="modal-close">&times;</span>
-      <h2 id="modal-title"></h2>
-      <img id="modal-img" src="" alt="" />
-      <p id="modal-bio"></p>
-      <p id="modal-price"></p>
-      <button id="modal-buy-button">Buy</button>
-    </div>
+    <h2 id="modal-name"></h2>
+    <img id="modal-img" />
+    <canvas id="avatar-preview" width="200" height="200"></canvas>
+    <p id="modal-price"></p>
+    <p id="modal-bio"></p>
+    <button id="modal-buy-btn">Buy</button>
+    <button onclick="document.getElementById('item-modal').style.display='none'">Close</button>
   </div>
 
   <script type="module">
@@ -154,7 +140,7 @@
       const snapshot = await getDocs(hatsCol);
       const hats = [];
       snapshot.forEach(doc => {
-        hats.push({ id: doc.id, ...doc.data() });
+        hats.push({ id: doc.id, ...doc.data(), type: "hat" });
       });
       return hats;
     }
@@ -164,7 +150,7 @@
       const snapshot = await getDocs(facesCol);
       const faces = [];
       snapshot.forEach(doc => {
-        faces.push({ id: doc.id, ...doc.data() });
+        faces.push({ id: doc.id, ...doc.data(), type: "face" });
       });
       return faces;
     }
@@ -183,11 +169,9 @@
       const hats = await getAllHatsFromFirestore();
       const faces = await getAllFacesFromFirestore();
 
-      const hatsTitle = document.createElement("h2");
-      hatsTitle.textContent = "Hats";
-      container.appendChild(hatsTitle);
+      const allItems = [...hats, ...faces];
 
-      hats.forEach(item => {
+      allItems.forEach(item => {
         const div = document.createElement("div");
         div.className = "shop-item";
         div.innerHTML = `
@@ -195,23 +179,8 @@
           <img src="${item.imageUrl}" alt="${item.name}" />
           <p>Cost: ${item.price} Cube Bucks</p>
         `;
-        div.onclick = () => showItemModal(item, ownedHats.includes(item.id), "hat");
-        container.appendChild(div);
-      });
 
-      const facesTitle = document.createElement("h2");
-      facesTitle.textContent = "Faces";
-      container.appendChild(facesTitle);
-
-      faces.forEach(item => {
-        const div = document.createElement("div");
-        div.className = "shop-item";
-        div.innerHTML = `
-          <h3>${item.name}</h3>
-          <img src="${item.imageUrl}" alt="${item.name}" />
-          <p>Cost: ${item.price} Cube Bucks</p>
-        `;
-        div.onclick = () => showItemModal(item, ownedFaces.includes(item.id), "face");
+        div.onclick = () => openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef);
         container.appendChild(div);
       });
 
@@ -222,59 +191,107 @@
       container.appendChild(bucksDisplay);
     }
 
-    function showItemModal(item, alreadyOwned, type) {
-      const modal = document.getElementById("item-modal");
-      document.getElementById("modal-title").textContent = item.name;
+    function openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef) {
+      document.getElementById("modal-name").textContent = item.name;
       document.getElementById("modal-img").src = item.imageUrl;
-      document.getElementById("modal-img").alt = item.name;
-      document.getElementById("modal-bio").textContent = item.bio || "No description available.";
       document.getElementById("modal-price").textContent = `Price: ${item.price} Cube Bucks`;
+      document.getElementById("modal-bio").textContent = item.bio || "No bio available.";
 
-      const buyBtn = document.getElementById("modal-buy-button");
-      buyBtn.disabled = alreadyOwned;
-      buyBtn.textContent = alreadyOwned ? "Owned" : "Buy";
+      renderAvatarPreview(item);
 
-      buyBtn.onclick = async () => {
-        const userRef = doc(db, "users", currentUserUid);
-        const freshSnap = await getDoc(userRef);
-        const freshData = freshSnap.exists() ? freshSnap.data() : {};
-        const freshBucks = freshData.cubeBucks || 0;
-        const ownedList = (type === "hat") ? freshData.hats || [] : freshData.faces || [];
+      const buyBtn = document.getElementById("modal-buy-btn");
+      const isOwned = (item.type === "hat" ? ownedHats : ownedFaces).includes(item.id);
 
-        if (freshBucks < item.price) {
-          alert("Not enough Cube Bucks!");
-          return;
-        }
+      if (isOwned) {
+        buyBtn.disabled = true;
+        buyBtn.textContent = "Owned";
+      } else {
+        buyBtn.disabled = false;
+        buyBtn.textContent = "Buy";
+        buyBtn.onclick = async () => {
+          const freshSnap = await getDoc(userRef);
+          const freshData = freshSnap.exists() ? freshSnap.data() : {};
+          const freshBucks = freshData.cubeBucks || 0;
 
-        if (ownedList.includes(item.id)) {
-          alert("You already own this!");
-          modal.style.display = "none";
+          if (freshBucks < item.price) {
+            alert("Not enough Cube Bucks!");
+            return;
+          }
+
+          const update = {
+            cubeBucks: freshBucks - item.price
+          };
+          if (item.type === "hat") {
+            update.hats = arrayUnion(item.id);
+          } else {
+            update.faces = arrayUnion(item.id);
+          }
+
+          await updateDoc(userRef, update);
+          alert(`Purchased ${item.name}!`);
+          document.getElementById("item-modal").style.display = "none";
           renderShop();
-          return;
-        }
-
-        const updatePayload = {
-          cubeBucks: freshBucks - item.price
         };
-        updatePayload[type === "hat" ? "hats" : "faces"] = arrayUnion(item.id);
+      }
 
-        await updateDoc(userRef, updatePayload);
-        alert(`Purchased ${item.name}!`);
-        modal.style.display = "none";
-        renderShop();
-      };
-
-      modal.style.display = "flex";
+      document.getElementById("item-modal").style.display = "block";
     }
 
-    document.getElementById("modal-close").onclick = () => {
-      document.getElementById("item-modal").style.display = "none";
-    };
+    // --- THREE.JS AVATAR PREVIEW ---
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js";
 
-    window.onclick = (e) => {
-      const modal = document.getElementById("item-modal");
-      if (e.target === modal) modal.style.display = "none";
-    };
+    let renderer, scene, camera, cube, hatMesh;
+
+    function renderAvatarPreview(item) {
+      if (!renderer) {
+        renderer = new THREE.WebGLRenderer({ canvas: document.getElementById("avatar-preview"), alpha: true });
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        camera.position.z = 3;
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(1, 1, 1).normalize();
+        scene.add(light);
+
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+        cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+      }
+
+      if (hatMesh) {
+        scene.remove(hatMesh);
+        hatMesh = null;
+      }
+
+      if (item.type === "face") {
+        const loader = new THREE.TextureLoader();
+        loader.load(item.imageUrl, (texture) => {
+          cube.material.map = texture;
+          cube.material.needsUpdate = true;
+        });
+      }
+
+      if (item.type === "hat") {
+        const loader = new THREE.TextureLoader();
+        loader.load(item.imageUrl, (texture) => {
+          const hatGeo = new THREE.BoxGeometry(0.6, 0.2, 0.6);
+          const hatMat = new THREE.MeshBasicMaterial({ map: texture });
+          hatMesh = new THREE.Mesh(hatGeo, hatMat);
+          hatMesh.position.y = 0.7;
+          scene.add(hatMesh);
+        });
+      }
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      cube.rotation.y += 0.01;
+      if (hatMesh) hatMesh.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    }
   </script>
 </body>
 </html>
