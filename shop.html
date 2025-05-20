@@ -8,72 +8,55 @@
       font-family: "Comic Sans MS", cursive, sans-serif;
       background-color: #f0ffe5;
       margin: 0;
+      padding: 0;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 200px;
+      background: #e0f2d8;
       padding: 20px;
+      border-right: 2px solid #4CAF50;
+    }
+
+    .sidebar button {
+      display: block;
+      margin-bottom: 10px;
+      width: 100%;
+      background: #c8facc;
+      color: black;
+      padding: 10px;
+      border: 2px solid #4CAF50;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 0; /* no roundness */
+    }
+
+    .content {
+      flex-grow: 1;
+      padding: 20px;
+      text-align: center;
     }
 
     h1 {
       color: #4CAF50;
-      text-align: center;
-    }
-
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .top-bar button {
-      background: #ffb6c1;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 2px solid #ff69b4;
-      cursor: pointer;
-    }
-
-    .tabs {
-      float: left;
-      width: 120px;
-      margin-right: 20px;
-    }
-
-    .tabs button {
-      display: block;
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #d8ffd8;
-      border: 2px solid #4CAF50;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    #shop-container {
-      margin-left: 140px;
+      margin-top: 0;
     }
 
     .shop-item {
       display: inline-block;
       margin: 20px;
       border: 2px solid #4CAF50;
-      border-radius: 10px;
       padding: 15px;
       background: white;
       width: 200px;
       cursor: pointer;
+      border-radius: 0;
     }
 
     .shop-item img {
       width: 100px;
       height: 100px;
-      border-radius: 10px;
     }
 
     #item-modal {
@@ -85,10 +68,10 @@
       background: white;
       padding: 20px;
       border: 3px solid #4CAF50;
-      border-radius: 10px;
       z-index: 999;
       width: 300px;
       text-align: center;
+      border-radius: 0;
     }
 
     #item-modal img {
@@ -103,8 +86,8 @@
       color: white;
       border: none;
       padding: 8px 12px;
-      border-radius: 6px;
       cursor: pointer;
+      border-radius: 0;
     }
 
     #avatar-preview {
@@ -113,24 +96,42 @@
       background: #eee;
       border: 1px solid #ccc;
     }
+
+    .top-left {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .top-left p {
+      font-weight: bold;
+      margin: 0 0 10px 0;
+    }
+
+    .top-left button {
+      background: #ffb6c1;
+      color: black;
+      padding: 8px 12px;
+      border: 2px solid #ff69b4;
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: 0;
+    }
   </style>
 </head>
 <body>
-  <div class="top-bar">
-    <div class="top-bar-left">
+  <div class="sidebar">
+    <div class="top-left">
+      <p id="cube-bucks-display">Cube Bucks: 0</p>
       <button onclick="window.location.href='home.html'">Home</button>
-      <span id="cube-bucks" style="font-weight:bold;">Cube Bucks: 0</span>
     </div>
+    <button onclick="setTab('hat')">Hats</button>
+    <button onclick="setTab('face')">Faces</button>
   </div>
 
-  <h1>BrickBugs Hat Shop</h1>
-
-  <div class="tabs">
-    <button onclick="setTab('hats')">Hats</button>
-    <button onclick="setTab('faces')">Faces</button>
+  <div class="content">
+    <h1>BrickBugs Shop</h1>
+    <div id="shop-container"></div>
   </div>
-
-  <div id="shop-container"></div>
 
   <div id="item-modal">
     <h2 id="modal-name"></h2>
@@ -163,37 +164,55 @@
     const db = getFirestore(app);
 
     let currentUserUid = null;
-    let userData = {};
-    let currentTab = 'hats'; // default tab
+    let currentTab = "hat"; // Default to hats
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       currentUserUid = user.uid;
-      await loadUserData();
-      renderShop();
+      await renderShop();
     });
 
-    async function loadUserData() {
-      const userRef = doc(db, "users", currentUserUid);
-      const docSnap = await getDoc(userRef);
-      userData = docSnap.exists() ? docSnap.data() : {};
-      document.getElementById("cube-bucks").textContent = `Cube Bucks: ${userData.cubeBucks || 0}`;
+    async function getAllHatsFromFirestore() {
+      const hatsCol = collection(db, "hats");
+      const snapshot = await getDocs(hatsCol);
+      const hats = [];
+      snapshot.forEach(doc => {
+        hats.push({ id: doc.id, ...doc.data(), type: "hat" });
+      });
+      return hats;
     }
 
-    async function setTab(tabName) {
-      currentTab = tabName;
-      renderShop();
+    async function getAllFacesFromFirestore() {
+      const facesCol = collection(db, "faces");
+      const snapshot = await getDocs(facesCol);
+      const faces = [];
+      snapshot.forEach(doc => {
+        faces.push({ id: doc.id, ...doc.data(), type: "face" });
+      });
+      return faces;
     }
 
     async function renderShop() {
       const container = document.getElementById("shop-container");
       container.innerHTML = "";
 
-      const hats = await getAllItems("hats", "hat");
-      const faces = await getAllItems("faces", "face");
-      const items = currentTab === 'hats' ? hats : faces;
+      const userRef = doc(db, "users", currentUserUid);
+      const docSnap = await getDoc(userRef);
+      const userData = docSnap.exists() ? docSnap.data() : {};
+      const ownedHats = userData.hats || [];
+      const ownedFaces = userData.faces || [];
+      const cubeBucks = userData.cubeBucks || 0;
 
-      items.forEach(item => {
+      document.getElementById("cube-bucks-display").textContent = `Cube Bucks: ${cubeBucks}`;
+
+      let allItems = [];
+      if (currentTab === "hat") {
+        allItems = await getAllHatsFromFirestore();
+      } else {
+        allItems = await getAllFacesFromFirestore();
+      }
+
+      allItems.forEach(item => {
         const div = document.createElement("div");
         div.className = "shop-item";
         div.innerHTML = `
@@ -201,21 +220,18 @@
           <img src="${item.imageUrl}" alt="${item.name}" />
           <p>Cost: ${item.price} Cube Bucks</p>
         `;
-        div.onclick = () => openItemModal(item);
+
+        div.onclick = () => openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef);
         container.appendChild(div);
       });
     }
 
-    async function getAllItems(collectionName, type) {
-      const snapshot = await getDocs(collection(db, collectionName));
-      const items = [];
-      snapshot.forEach(doc => {
-        items.push({ id: doc.id, ...doc.data(), type });
-      });
-      return items;
+    function setTab(type) {
+      currentTab = type;
+      renderShop();
     }
 
-    function openItemModal(item) {
+    function openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef) {
       document.getElementById("modal-name").textContent = item.name;
       document.getElementById("modal-price").textContent = `Price: ${item.price} Cube Bucks`;
       document.getElementById("modal-bio").textContent = item.bio || "No bio available.";
@@ -223,8 +239,7 @@
       render2DAvatarPreview(item);
 
       const buyBtn = document.getElementById("modal-buy-btn");
-      const owned = (item.type === "hat" ? userData.hats : userData.faces) || [];
-      const isOwned = owned.includes(item.id);
+      const isOwned = (item.type === "hat" ? ownedHats : ownedFaces).includes(item.id);
 
       if (isOwned) {
         buyBtn.disabled = true;
@@ -233,7 +248,7 @@
         buyBtn.disabled = false;
         buyBtn.textContent = "Buy";
         buyBtn.onclick = async () => {
-          const freshSnap = await getDoc(doc(db, "users", currentUserUid));
+          const freshSnap = await getDoc(userRef);
           const freshData = freshSnap.exists() ? freshSnap.data() : {};
           const freshBucks = freshData.cubeBucks || 0;
 
@@ -251,10 +266,9 @@
             update.faces = arrayUnion(item.id);
           }
 
-          await updateDoc(doc(db, "users", currentUserUid), update);
+          await updateDoc(userRef, update);
           alert(`Purchased ${item.name}!`);
-          document.getElementById('item-modal').style.display = 'none';
-          await loadUserData();
+          document.getElementById("item-modal").style.display = "none";
           renderShop();
         };
       }
