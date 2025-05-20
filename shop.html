@@ -9,11 +9,54 @@
       background-color: #f0ffe5;
       margin: 0;
       padding: 20px;
-      text-align: center;
     }
 
     h1 {
       color: #4CAF50;
+      text-align: center;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .top-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .top-bar button {
+      background: #ffb6c1;
+      color: black;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 2px solid #ff69b4;
+      cursor: pointer;
+    }
+
+    .tabs {
+      float: left;
+      width: 120px;
+      margin-right: 20px;
+    }
+
+    .tabs button {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #d8ffd8;
+      border: 2px solid #4CAF50;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #shop-container {
+      margin-left: 140px;
     }
 
     .shop-item {
@@ -31,21 +74,6 @@
       width: 100px;
       height: 100px;
       border-radius: 10px;
-    }
-
-    .top-bar {
-      text-align: right;
-      margin-bottom: 20px;
-    }
-
-    .top-bar button {
-      margin-left: 10px;
-      background: #ffb6c1;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 2px solid #ff69b4;
-      cursor: pointer;
     }
 
     #item-modal {
@@ -89,9 +117,19 @@
 </head>
 <body>
   <div class="top-bar">
-    <button onclick="window.location.href='home.html'">Home</button>
+    <div class="top-bar-left">
+      <button onclick="window.location.href='home.html'">Home</button>
+      <span id="cube-bucks" style="font-weight:bold;">Cube Bucks: 0</span>
+    </div>
   </div>
+
   <h1>BrickBugs Hat Shop</h1>
+
+  <div class="tabs">
+    <button onclick="setTab('hats')">Hats</button>
+    <button onclick="setTab('faces')">Faces</button>
+  </div>
+
   <div id="shop-container"></div>
 
   <div id="item-modal">
@@ -125,50 +163,37 @@
     const db = getFirestore(app);
 
     let currentUserUid = null;
+    let userData = {};
+    let currentTab = 'hats'; // default tab
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return window.location.href = "index.html";
       currentUserUid = user.uid;
-      await renderShop();
+      await loadUserData();
+      renderShop();
     });
 
-    async function getAllHatsFromFirestore() {
-      const hatsCol = collection(db, "hats");
-      const snapshot = await getDocs(hatsCol);
-      const hats = [];
-      snapshot.forEach(doc => {
-        hats.push({ id: doc.id, ...doc.data(), type: "hat" });
-      });
-      return hats;
+    async function loadUserData() {
+      const userRef = doc(db, "users", currentUserUid);
+      const docSnap = await getDoc(userRef);
+      userData = docSnap.exists() ? docSnap.data() : {};
+      document.getElementById("cube-bucks").textContent = `Cube Bucks: ${userData.cubeBucks || 0}`;
     }
 
-    async function getAllFacesFromFirestore() {
-      const facesCol = collection(db, "faces");
-      const snapshot = await getDocs(facesCol);
-      const faces = [];
-      snapshot.forEach(doc => {
-        faces.push({ id: doc.id, ...doc.data(), type: "face" });
-      });
-      return faces;
+    async function setTab(tabName) {
+      currentTab = tabName;
+      renderShop();
     }
 
     async function renderShop() {
       const container = document.getElementById("shop-container");
       container.innerHTML = "";
 
-      const userRef = doc(db, "users", currentUserUid);
-      const docSnap = await getDoc(userRef);
-      const userData = docSnap.exists() ? docSnap.data() : {};
-      const ownedHats = userData.hats || [];
-      const ownedFaces = userData.faces || [];
-      const cubeBucks = userData.cubeBucks || 0;
+      const hats = await getAllItems("hats", "hat");
+      const faces = await getAllItems("faces", "face");
+      const items = currentTab === 'hats' ? hats : faces;
 
-      const hats = await getAllHatsFromFirestore();
-      const faces = await getAllFacesFromFirestore();
-
-      const allItems = [...hats, ...faces];
-
-      allItems.forEach(item => {
+      items.forEach(item => {
         const div = document.createElement("div");
         div.className = "shop-item";
         div.innerHTML = `
@@ -176,19 +201,21 @@
           <img src="${item.imageUrl}" alt="${item.name}" />
           <p>Cost: ${item.price} Cube Bucks</p>
         `;
-
-        div.onclick = () => openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef);
+        div.onclick = () => openItemModal(item);
         container.appendChild(div);
       });
-
-      const bucksDisplay = document.createElement("p");
-      bucksDisplay.textContent = `Your Cube Bucks: ${cubeBucks}`;
-      bucksDisplay.style.fontWeight = "bold";
-      bucksDisplay.style.marginTop = "30px";
-      container.appendChild(bucksDisplay);
     }
 
-    function openItemModal(item, ownedHats, ownedFaces, cubeBucks, userRef) {
+    async function getAllItems(collectionName, type) {
+      const snapshot = await getDocs(collection(db, collectionName));
+      const items = [];
+      snapshot.forEach(doc => {
+        items.push({ id: doc.id, ...doc.data(), type });
+      });
+      return items;
+    }
+
+    function openItemModal(item) {
       document.getElementById("modal-name").textContent = item.name;
       document.getElementById("modal-price").textContent = `Price: ${item.price} Cube Bucks`;
       document.getElementById("modal-bio").textContent = item.bio || "No bio available.";
@@ -196,7 +223,8 @@
       render2DAvatarPreview(item);
 
       const buyBtn = document.getElementById("modal-buy-btn");
-      const isOwned = (item.type === "hat" ? ownedHats : ownedFaces).includes(item.id);
+      const owned = (item.type === "hat" ? userData.hats : userData.faces) || [];
+      const isOwned = owned.includes(item.id);
 
       if (isOwned) {
         buyBtn.disabled = true;
@@ -205,7 +233,7 @@
         buyBtn.disabled = false;
         buyBtn.textContent = "Buy";
         buyBtn.onclick = async () => {
-          const freshSnap = await getDoc(userRef);
+          const freshSnap = await getDoc(doc(db, "users", currentUserUid));
           const freshData = freshSnap.exists() ? freshSnap.data() : {};
           const freshBucks = freshData.cubeBucks || 0;
 
@@ -223,9 +251,10 @@
             update.faces = arrayUnion(item.id);
           }
 
-          await updateDoc(userRef, update);
+          await updateDoc(doc(db, "users", currentUserUid), update);
           alert(`Purchased ${item.name}!`);
-          document.getElementById("item-modal").style.display = "none";
+          document.getElementById('item-modal').style.display = 'none';
+          await loadUserData();
           renderShop();
         };
       }
@@ -234,33 +263,26 @@
     }
 
     function render2DAvatarPreview(item) {
-  const canvas = document.getElementById("avatar-preview");
-  const ctx = canvas.getContext("2d");
+      const canvas = document.getElementById("avatar-preview");
+      const ctx = canvas.getContext("2d");
 
-  // Clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Player position on canvas
-  const p = { x: 100, y: 100 }; // Center of canvas
+      const p = { x: 100, y: 100 };
 
-  // Draw gray cube
-  ctx.fillStyle = "#888";
-  ctx.fillRect(p.x - 25, p.y - 25, 50, 50); // 50x50 gray cube centered on (p.x, p.y)
+      ctx.fillStyle = "#888";
+      ctx.fillRect(p.x - 25, p.y - 25, 50, 50);
 
-  // Load image and draw if loaded properly
-  const img = new Image();
-  img.src = item.imageUrl;
-  img.onload = () => {
-    if (item.type === "face") {
-      // Face goes directly on the cube
-      ctx.drawImage(img, p.x - 25, p.y - 25, 50, 50);
-    } else if (item.type === "hat") {
-      // Hat floats above the cube
-      ctx.drawImage(img, p.x - 21, p.y - 50, 50, 50);
+      const img = new Image();
+      img.src = item.imageUrl;
+      img.onload = () => {
+        if (item.type === "face") {
+          ctx.drawImage(img, p.x - 25, p.y - 25, 50, 50);
+        } else if (item.type === "hat") {
+          ctx.drawImage(img, p.x - 21, p.y - 50, 50, 50);
+        }
+      };
     }
-  };
-}
-
   </script>
 </body>
 </html>
