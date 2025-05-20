@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BrickBugs Profile Viewer</title>
   <style>
     body {
@@ -19,7 +19,7 @@
     .profile-box {
       background: white;
       padding: 30px;
-      border-radius: 15px;
+      /* Removed rounded corners */
       max-width: 500px;
       width: 90%;
       box-shadow: 0 4px 8px rgba(0,0,0,0.15);
@@ -31,7 +31,7 @@
       width: 90%;
       margin-top: 10px;
       border: 1px solid #ccc;
-      border-radius: 8px;
+      /* Removed border-radius */
       font-family: "Comic Sans MS", cursive, sans-serif;
     }
 
@@ -42,7 +42,7 @@
     button {
       padding: 10px 20px;
       border: none;
-      border-radius: 8px;
+      /* Removed border-radius */
       margin: 10px 5px 0;
       font-size: 1em;
       cursor: pointer;
@@ -85,7 +85,7 @@
       height: 150px;
       background-color: #3498db;
       margin: 0 auto;
-      border-radius: 15px;
+      /* Removed border-radius to avoid rounding */
       box-shadow: 0 0 10px rgba(0,0,0,0.3);
       transition: background-color 0.3s ease;
       position: relative;
@@ -102,22 +102,21 @@
       border: none !important;
       box-shadow: none !important;
       transition: filter 0.3s ease;
-      z-index: 1;
+      z-index: 2;
       display: none;
     }
-
     .avatar-face {
-  position: absolute;
-  top: 25%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  pointer-events: none;
-  user-select: none;
-  z-index: 1;
-}
-
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      pointer-events: none;
+      user-select: none;
+      z-index: 1;
+      object-fit: contain;
+    }
   </style>
 </head>
 <body>
@@ -160,9 +159,9 @@
     let hatsMap = new Map(); // id => hat data
 
     document.addEventListener("DOMContentLoaded", () => {
-  const searchBtn = document.getElementById("searchBtn");
-  searchBtn.addEventListener("click", searchByUsername);
-});
+      const searchBtn = document.getElementById("searchBtn");
+      searchBtn.addEventListener("click", searchByUsername);
+    });
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -173,7 +172,6 @@
       }
     });
 
-    // Load hats collection once for lookup
     async function loadHats() {
       const hatsCol = collection(db, "hats");
       const snapshot = await getDocs(hatsCol);
@@ -202,26 +200,25 @@
       loadProfile();
     };
 
-function renderAvatar(data) {
-  const avatarColor = data.avatarColor || "#3498db";
-  const equippedHatId = data.equippedHat || "";
-  const faceUrl = data.faceUrl || ""; // Add this line
+    function renderAvatar(data) {
+      const avatarColor = data.avatarColor || "#3498db";
+      const equippedHatId = data.equippedHat || "";
+      const faceUrl = data.faceUrl || "";
 
-  let hatImgSrc = "";
-  if (equippedHatId && hatsMap.has(equippedHatId)) {
-    const hat = hatsMap.get(equippedHatId);
-    hatImgSrc = hat.imageUrl || "";
-  }
+      let hatImgSrc = "";
+      if (equippedHatId && hatsMap.has(equippedHatId)) {
+        const hat = hatsMap.get(equippedHatId);
+        hatImgSrc = hat.imageUrl || "";
+      }
 
-  return `
-    <div class="avatar-container">
-      <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
-      ${faceUrl ? `<img src="${faceUrl}" alt="Face" class="avatar-face" />` : ""}
-      ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
-    </div>
-  `;
-}
-
+      return `
+        <div class="avatar-container">
+          <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
+          ${faceUrl ? `<img src="${faceUrl}" alt="Face" class="avatar-face" />` : ""}
+          ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
+        </div>
+      `;
+    }
 
     async function loadProfile() {
       const data = currentProfileData;
