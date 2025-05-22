@@ -240,76 +240,71 @@
 }
 
     async function loadProfile() {
-      const data = currentProfileData;
-      const uid = currentProfileUid;
-      const likes = data.likes || 0;
-      const dislikes = data.dislikes || 0;
-      const termipoints = likes - dislikes;
-      const bio = data.bio || "";
+  const data = currentProfileData;
+  const uid = currentProfileUid;
+  const likes = data.likes || 0;
+  const dislikes = data.dislikes || 0;
+  const termipoints = likes - dislikes;
+  const bio = data.bio || "";
 
-      const userHasLiked = (data.likedBy || []).includes(currentUserUid);
-      const userHasDisliked = (data.dislikedBy || []).includes(currentUserUid);
-      const isOwnProfile = currentUserUid === uid;
+  const userHasLiked = (data.likedBy || []).includes(currentUserUid);
+  const userHasDisliked = (data.dislikedBy || []).includes(currentUserUid);
+  const isOwnProfile = currentUserUid === uid;
 
-      document.getElementById("profileData").innerHTML = `
-        <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
-        ${renderAvatar(data)}
-        <p>Cube Bucks: ${data.cubeBucks || 0}</p>
-        <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
-        <button id="friendRequestBtn">Send Friend Request</button>
+  document.getElementById("profileData").innerHTML = `
+    <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
+    ${renderAvatar(data)}
+    <p>Cube Bucks: ${data.cubeBucks || 0}</p>
+    <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
 
-        <p><strong>Termipoints:</strong> ${termipoints}</p>
-        
-        ${isOwnProfile
-          ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
-             <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
-          : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`}
+    ${!isOwnProfile ? `<button id="friendRequestBtn" class="home-btn">Send Friend Request</button>` : ''}
 
-        <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? 'Undo Like' : 'Like'}</button>
-        <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? 'Undo Dislike' : 'Dislike'}</button>
-      `;
-    }
-document.getElementById("profileData").innerHTML = `
-  ...
-  <button id="friendRequestBtn">Send Friend Request</button>
-  ...
-`;
+    <p><strong>Termipoints:</strong> ${termipoints}</p>
+    
+    ${isOwnProfile
+      ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
+         <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
+      : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`}
 
-// Add event listener AFTER inserting the button
-const friendRequestBtn = document.getElementById("friendRequestBtn");
-if (friendRequestBtn) {
-  friendRequestBtn.onclick = async () => {
-    if (!currentProfileUid || currentProfileUid === currentUserUid) {
-      alert("Cannot send friend request to yourself.");
-      return;
-    }
+    <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? 'Undo Like' : 'Like'}</button>
+    <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? 'Undo Dislike' : 'Dislike'}</button>
+  `;
 
-    // Add currentUserUid to the other user's friendRequests array
-    const otherUserRef = doc(db, "users", currentProfileUid);
+  // Add friend request button event listener if button exists
+  const friendRequestBtn = document.getElementById("friendRequestBtn");
+  if (friendRequestBtn) {
+    friendRequestBtn.onclick = async () => {
+      if (!currentProfileUid || currentProfileUid === currentUserUid) {
+        alert("Cannot send friend request to yourself.");
+        return;
+      }
 
-    // Check if already requested or friends
-    const otherSnap = await getDoc(otherUserRef);
-    if (!otherSnap.exists()) {
-      alert("User does not exist.");
-      return;
-    }
-    const otherData = otherSnap.data();
-    if ((otherData.friendRequests || []).includes(currentUserUid)) {
-      alert("Friend request already sent.");
-      return;
-    }
-    if ((otherData.friends || []).includes(currentUserUid)) {
-      alert("You are already friends.");
-      return;
-    }
+      const otherUserRef = doc(db, "users", currentProfileUid);
+      const otherSnap = await getDoc(otherUserRef);
+      if (!otherSnap.exists()) {
+        alert("User does not exist.");
+        return;
+      }
+      const otherData = otherSnap.data();
 
-    await updateDoc(otherUserRef, {
-      friendRequests: arrayUnion(currentUserUid)
-    });
+      if ((otherData.friendRequests || []).includes(currentUserUid)) {
+        alert("Friend request already sent.");
+        return;
+      }
+      if ((otherData.friends || []).includes(currentUserUid)) {
+        alert("You are already friends.");
+        return;
+      }
 
-    alert("Friend request sent!");
-  };
+      await updateDoc(otherUserRef, {
+        friendRequests: arrayUnion(currentUserUid)
+      });
+
+      alert("Friend request sent!");
+    };
+  }
 }
+
 
     window.toggleLike = async function (uid) {
       const ref = doc(db, "users", uid);
