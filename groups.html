@@ -1,1 +1,198 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Groups</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc, setDoc, collection,
+      addDoc, onSnapshot, query, where
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserUid = null;
+    let userData = null;
+
+    const groupsContainer = document.getElementById("groupsContainer");
+    const createGroupForm = document.getElementById("createGroupForm");
+    const groupNameInput = document.getElementById("groupNameInput");
+    const message = document.getElementById("message");
+
+    onAuthStateChanged(auth, async user => {
+      if (!user) {
+        window.location.href = "/login.html";
+        return;
+      }
+
+      currentUserUid = user.uid;
+      const userDoc = await getDoc(doc(db, "users", currentUserUid));
+      if (!userDoc.exists()) return;
+      userData = userDoc.data();
+
+      loadGroups();
+    });
+
+    async function loadGroups() {
+      const q = query(collection(db, "groups"));
+      onSnapshot(q, snapshot => {
+        groupsContainer.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const group = docSnap.data();
+          const groupId = docSnap.id;
+          const isMember = group.members?.includes(currentUserUid);
+
+          const div = document.createElement("div");
+          div.innerHTML = `
+            <strong>${group.name}</strong> (${group.members?.length || 0} members)
+            <button>${isMember ? "Leave" : "Join"}</button>
+          `;
+
+          const button = div.querySelector("button");
+          button.onclick = () => isMember ? leaveGroup(groupId) : joinGroup(groupId);
+
+          groupsContainer.appendChild(div);
+        });
+      });
+    }
+
+    async function joinGroup(groupId) {
+      const groupRef = doc(db, "groups", groupId);
+      const groupSnap = await getDoc(groupRef);
+      if (!groupSnap.exists()) return;
+
+      const group = groupSnap.data();
+      const joinedGroups = userData.groups || [];
+
+      if (joinedGroups.length >= 25) {
+        showMessage("You can only join up to 25 groups.");
+        return;
+      }
+
+      if (group.members?.includes(currentUserUid)) return;
+
+      await updateDoc(groupRef, {
+        members: [...(group.members || []), currentUserUid]
+      });
+
+      const userRef = doc(db, "users", currentUserUid);
+      await updateDoc(userRef, {
+        groups: [...joinedGroups, groupId]
+      });
+
+      userData.groups = [...joinedGroups, groupId];
+    }
+
+    async function leaveGroup(groupId) {
+      const groupRef = doc(db, "groups", groupId);
+      const groupSnap = await getDoc(groupRef);
+      if (!groupSnap.exists()) return;
+
+      const group = groupSnap.data();
+      const userRef = doc(db, "users", currentUserUid);
+      const newMembers = group.members.filter(uid => uid !== currentUserUid);
+      const newGroups = (userData.groups || []).filter(id => id !== groupId);
+
+      await updateDoc(groupRef, { members: newMembers });
+      await updateDoc(userRef, { groups: newGroups });
+
+      userData.groups = newGroups;
+    }
+
+    createGroupForm.onsubmit = async e => {
+      e.preventDefault();
+
+      const name = groupNameInput.value.trim();
+      if (!name) return;
+
+      const userRef = doc(db, "users", currentUserUid);
+      const cubeBucks = userData.cubeBucks || 0;
+      const userGroups = userData.groups || [];
+
+      if (cubeBucks < 100) {
+        showMessage("You need 100 Cube Bucks to create a group.");
+        return;
+      }
+
+      if (userGroups.length >= 25) {
+        showMessage("You can only be in up to 25 groups.");
+        return;
+      }
+
+      const newGroup = {
+        name,
+        owner: currentUserUid,
+        members: [currentUserUid]
+      };
+
+      const groupDocRef = await addDoc(collection(db, "groups"), newGroup);
+
+      await updateDoc(userRef, {
+        cubeBucks: cubeBucks - 100,
+        groups: [...userGroups, groupDocRef.id]
+      });
+
+      userData.cubeBucks -= 100;
+      userData.groups.push(groupDocRef.id);
+      groupNameInput.value = "";
+      showMessage("Group created!");
+    };
+
+    function showMessage(msg) {
+      message.textContent = msg;
+      setTimeout(() => message.textContent = "", 3000);
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+      background: #f8f8f8;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    input, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+    }
+
+    #groupsContainer div {
+      background: white;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <h2>Groups</h2>
+  <form id="createGroupForm">
+    <input type="text" id="groupNameInput" placeholder="Group Name" maxlength="32" required />
+    <button type="submit">Create Group (100 Cube Bucks)</button>
+  </form>
+
+  <p id="message" style="color: red;"></p>
+  <div id="groupsContainer"></div>
+</body>
+</html>
