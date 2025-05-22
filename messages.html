@@ -368,10 +368,11 @@ button {
 
    function listenForMessages() {
   const messagesContainer = document.getElementById("messagesContainer");
-  messagesContainer.innerHTML = `
-    <div id="friendsSidebar" style="float: left; width: 30%; max-height: 500px; overflow-y: auto; border-right: 1px solid #ccc; padding-right: 10px;"></div>
-    <div id="conversationArea" style="margin-left: 32%;"></div>
-  `;
+messagesContainer.innerHTML = `
+  <div id="friendsSidebar" style="float: left; width: 38%; max-height: 550px; overflow-y: auto; border-right: 1px solid #ccc; padding-right: 15px;"></div>
+  <div id="conversationArea" style="margin-left: 40%; max-height: 550px; overflow-y: auto; padding-left: 15px;"></div>
+`;
+
 
   const sidebar = document.getElementById("friendsSidebar");
   const conversationArea = document.getElementById("conversationArea");
@@ -410,15 +411,16 @@ button {
 
   function openConversation(friendUid, friendUsername, conversationId) {
     conversationArea.innerHTML = `
-      <div class="friend-messages">
-        <h3>${friendUsername}</h3>
-        <div class="messages-list" style="max-height: 350px; overflow-y: auto;"></div>
-        <div class="send-box">
-          <input type="text" class="message-input" placeholder="Type a message..." />
-          <button class="send-button">Send</button>
-        </div>
-      </div>
-    `;
+  <div class="friend-messages">
+    <h3>${friendUsername}</h3>
+    <div class="messages-list" style="max-height: 450px; overflow-y: auto;"></div>
+    <div class="send-box">
+      <input type="text" class="message-input" placeholder="Type a message..." />
+      <button class="send-button">Send</button>
+    </div>
+  </div>
+`;
+
 
     const input = conversationArea.querySelector(".message-input");
     const sendBtn = conversationArea.querySelector(".send-button");
