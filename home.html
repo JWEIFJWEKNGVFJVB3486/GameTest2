@@ -11,26 +11,28 @@
       background: #d9f5c8;
     }
 
-    .navbar {
+   .navbar {
   background: #4CAF50;
   color: white;
   padding: 10px 20px;
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   font-size: 1.5em;
   border-bottom: 3px solid #388e3c;
   position: relative;
+  height: 130px; /* Increased height for larger banner */
 }
 
 .banner-container {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 0;
 }
 
 .banner-image {
-  height: 100px;
+  height: 120px; /* Make banner bigger */
   object-fit: contain;
 }
 
@@ -49,6 +51,7 @@
     .content {
       padding: 30px;
       text-align: center;
+       z-index: 1;
     }
 
     h2 {
