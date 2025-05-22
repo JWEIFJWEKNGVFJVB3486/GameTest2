@@ -5,73 +5,81 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BrickBugs Home</title>
   <style>
-    body {
-        margin: 0;
-      font-family: Verdana, Geneva, sans-serif;
-      background: #d9f5c8;
-    }
+   body {
+  margin: 0;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  background: #d9f5c8;
+}
 
 .topbar {
-  background: linear-gradient(to bottom, #017a00, #005900); /* darker green gradient */
+  background: linear-gradient(to bottom, #017a00, #005900);
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 40px;
+  flex-wrap: wrap; /* allow wrapping on small screens */
+  height: auto; /* let height grow if wrapped */
   border-bottom: 2px solid #004400;
+  padding: 5px 0;
 }
 
 .tab-button {
   color: white;
-  background-color: #5cb85c; /* less intense green */
+  background-color: #5cb85c;
   border: 1px solid #3e703e;
   border-bottom: none;
-  padding: 5px 12px;
-  font-size: 14px;
-  margin: 0 2px;
+  padding: 10px 14px; /* bigger tap area */
+  font-size: 16px; /* larger font on mobile */
+  margin: 4px 6px;
   cursor: pointer;
   border-radius: 4px 4px 0 0;
   text-decoration: none;
   transition: background-color 0.2s ease;
+  flex: 1 0 auto; /* allow buttons to shrink but keep spacing */
+  max-width: 160px; /* avoid buttons getting too wide */
+  text-align: center;
 }
 
 .tab-button:hover {
-  background-color: #78c478; /* lighter hover green */
+  background-color: #78c478;
 }
 
 .banner-container {
   text-align: center;
-  background: #4caf50; /* medium green background */
+  background: #4caf50;
   padding: 10px 0;
   border-bottom: 2px solid #388e3c;
 }
 
 .banner-image {
-  height: 120px; /* keep bigger banner */
+  height: 120px;
+  max-width: 90vw; /* responsive width */
   object-fit: contain;
 }
 
+.user-info {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  color: white;
+  font-size: 14px;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+}
 
-    .user-info {
-      position: absolute;
-      top: 5px;
-      right: 10px;
-      color: white;
-      font-size: 12px;
-    }
+.content {
+  padding: 20px 15px;
+  text-align: center;
+}
 
+h2 {
+  color: #388e3c;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+}
 
-    .content {
-      padding: 30px;
-      text-align: center;
-    }
+p {
+  font-size: 1.2em;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+}
 
-    h2 {
-      color: #388e3c;
-    }
-
-    p {
-      font-size: 1.1em;
-    }
   </style>
 </head>
 <body>
