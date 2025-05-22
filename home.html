@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>BrickBugs Home</title>
   <style>
-   body {
+body {
   margin: 0;
   font-family: "Comic Sans MS", cursive, sans-serif;
   background: #d9f5c8;
@@ -16,53 +16,79 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-wrap: wrap; /* allow wrapping on small screens */
-  height: auto; /* let height grow if wrapped */
+  flex-wrap: wrap;
+  height: auto;
   border-bottom: 2px solid #004400;
   padding: 5px 0;
 }
 
 .tab-button {
   color: white;
-  background-color: #5cb85c;
+  background: linear-gradient(to bottom, #5cb85c, #4a8a4a);
   border: 1px solid #3e703e;
   border-bottom: none;
-  padding: 10px 14px; /* bigger tap area */
-  font-size: 16px; /* larger font on mobile */
+  padding: 6px 10px;
+  font-size: 14px;
   margin: 4px 6px;
   cursor: pointer;
   border-radius: 4px 4px 0 0;
   text-decoration: none;
   transition: background-color 0.2s ease;
-  flex: 1 0 auto; /* allow buttons to shrink but keep spacing */
-  max-width: 160px; /* avoid buttons getting too wide */
+  flex: 0 1 auto;
+  max-width: 140px;
   text-align: center;
 }
 
 .tab-button:hover {
-  background-color: #78c478;
+  background: linear-gradient(to bottom, #78c478, #5d955d);
 }
 
 .banner-container {
   text-align: center;
   background: #4caf50;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 2px solid #388e3c;
 }
 
 .banner-image {
-  height: 120px;
-  max-width: 90vw; /* responsive width */
+  height: 140px;
+  max-width: 95vw;
   object-fit: contain;
 }
 
 .user-info {
   position: absolute;
-  top: 5px;
+  top: 8px;
   right: 10px;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-family: "Comic Sans MS", cursive, sans-serif;
+  background: rgba(1, 50, 1, 0.7);
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-info button {
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  background-color: #3e703e;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.user-info button:hover {
+  background-color: #5cb85c;
 }
 
 .content {
