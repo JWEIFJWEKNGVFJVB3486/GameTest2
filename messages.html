@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Messages - Friend Requests</title>
+  <title>Messages & Friend Requests</title>
   <style>
     body {
       font-family: "Comic Sans MS", cursive, sans-serif;
@@ -13,6 +13,28 @@
     h2 {
       text-align: center;
     }
+    #tabs {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .tab-button {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      border-bottom: 3px solid transparent;
+      background: #a7d8a0;
+      font-weight: bold;
+      font-size: 16px;
+      margin: 0 10px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab-button.active {
+      border-bottom: 3px solid #4caf50;
+      background: #d0f1c4;
+    }
+
+    /* Friend Requests */
     .request {
       background: white;
       padding: 15px;
@@ -46,19 +68,73 @@
       font-style: italic;
       color: #555;
     }
+
+    /* Messages */
+    #messagesContainer {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .friend-messages {
+      margin-bottom: 30px;
+    }
+    .friend-messages h3 {
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .message {
+      background: #e2f0d9;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 12px;
+      max-width: 75%;
+      word-wrap: break-word;
+    }
+    .message.sent {
+      background: #c1e1a6;
+      margin-left: auto;
+      text-align: right;
+    }
+    #noMessages {
+      text-align: center;
+      font-style: italic;
+      color: #555;
+      margin-top: 50px;
+    }
   </style>
 </head>
 <body>
-  <h2>Friend Requests</h2>
-  <div id="requestsContainer">
-    <p id="noRequests">Loading friend requests...</p>
+  <h2>Messages & Friend Requests</h2>
+
+  <div id="tabs">
+    <button class="tab-button active" id="tabRequestsBtn">Friend Requests</button>
+    <button class="tab-button" id="tabMessagesBtn">Messages</button>
+  </div>
+
+  <div id="tabRequests" style="display: block;">
+    <div id="requestsContainer">
+      <p id="noRequests">Loading friend requests...</p>
+    </div>
+  </div>
+
+  <div id="tabMessages" style="display: none;">
+    <div id="messagesContainer">
+      <p id="noMessages">Loading messages...</p>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot
+      getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove,
+      onSnapshot, collection, query, orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -76,26 +152,46 @@
     const db = getFirestore(app);
 
     let currentUserUid = null;
+    let friendsList = [];
+
+    // TAB BUTTONS
+    const tabRequestsBtn = document.getElementById("tabRequestsBtn");
+    const tabMessagesBtn = document.getElementById("tabMessagesBtn");
+    const tabRequests = document.getElementById("tabRequests");
+    const tabMessages = document.getElementById("tabMessages");
+
+    tabRequestsBtn.onclick = () => {
+      tabRequests.style.display = "block";
+      tabMessages.style.display = "none";
+      tabRequestsBtn.classList.add("active");
+      tabMessagesBtn.classList.remove("active");
+    };
+    tabMessagesBtn.onclick = () => {
+      tabRequests.style.display = "none";
+      tabMessages.style.display = "block";
+      tabMessagesBtn.classList.add("active");
+      tabRequestsBtn.classList.remove("active");
+    };
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
-        // Not logged in, redirect to login
         window.location.href = "index.html";
         return;
       }
       currentUserUid = user.uid;
       listenForRequests();
+      await loadFriendsList();
+      listenForMessages();
     });
 
     function listenForRequests() {
       const userDocRef = doc(db, "users", currentUserUid);
-
-      // Use onSnapshot to listen for real-time updates
       onSnapshot(userDocRef, docSnap => {
         if (!docSnap.exists()) return;
         const data = docSnap.data();
         const requests = data.friendRequests || [];
         renderRequests(requests);
+        friendsList = data.friends || [];
       });
     }
 
@@ -109,7 +205,6 @@
       }
 
       requests.forEach(requestUid => {
-        // For each request, fetch username for display
         getDoc(doc(db, "users", requestUid)).then(userSnap => {
           if (!userSnap.exists()) return;
 
@@ -139,13 +234,11 @@
       const userRef = doc(db, "users", currentUserUid);
       const requesterRef = doc(db, "users", requestUid);
 
-      // Remove the request from current user
       await updateDoc(userRef, {
         friendRequests: arrayRemove(requestUid)
       });
 
       if (accept) {
-        // Add each other as friends
         await updateDoc(userRef, {
           friends: arrayUnion(requestUid)
         });
@@ -153,10 +246,73 @@
           friends: arrayUnion(currentUserUid)
         });
       }
+    }
 
-      // Optionally show some confirmation or refresh UI — onSnapshot updates UI automatically
+    async function loadFriendsList() {
+      const userDocRef = doc(db, "users", currentUserUid);
+      const docSnap = await getDoc(userDocRef);
+      if (!docSnap.exists()) return;
+      const data = docSnap.data();
+      friendsList = data.friends || [];
+    }
+
+    // Utility: get conversation ID string for two users (sorted uids)
+    function getConversationId(uid1, uid2) {
+      return [uid1, uid2].sort().join("_");
+    }
+
+    // Listen for new messages for all friends, grouped by friend
+    function listenForMessages() {
+      const messagesContainer = document.getElementById("messagesContainer");
+      messagesContainer.innerHTML = '<p id="noMessages">Loading messages...</p>';
+
+      if (friendsList.length === 0) {
+        messagesContainer.innerHTML = '<p id="noMessages">No messages to show. Add friends to start chatting.</p>';
+        return;
+      }
+
+      messagesContainer.innerHTML = "";
+
+      friendsList.forEach(async friendUid => {
+        const friendDoc = await getDoc(doc(db, "users", friendUid));
+        if (!friendDoc.exists()) return;
+
+        const friendUsername = friendDoc.data().username || "Unknown";
+
+        const conversationId = getConversationId(currentUserUid, friendUid);
+        const messagesQuery = query(
+          collection(db, "messages", conversationId, "messages"),
+          orderBy("timestamp")
+        );
+
+        const friendMessagesDiv = document.createElement("div");
+        friendMessagesDiv.className = "friend-messages";
+        friendMessagesDiv.innerHTML = `<h3>${friendUsername}</h3><div class="messages-list"></div>`;
+
+        const messagesListDiv = friendMessagesDiv.querySelector(".messages-list");
+        messagesContainer.appendChild(friendMessagesDiv);
+
+        // Listen to messages in real-time for this friend
+        onSnapshot(messagesQuery, snapshot => {
+          messagesListDiv.innerHTML = "";
+          if (snapshot.empty) {
+            messagesListDiv.innerHTML = "<p><i>No messages yet.</i></p>";
+            return;
+          }
+          snapshot.forEach(docSnap => {
+            const msg = docSnap.data();
+            const messageDiv = document.createElement("div");
+            messageDiv.className = "message";
+            if (msg.sender === currentUserUid) messageDiv.classList.add("sent");
+            messageDiv.textContent = msg.text;
+            messagesListDiv.appendChild(messageDiv);
+          });
+
+          // Scroll to bottom
+          messagesListDiv.scrollTop = messagesListDiv.scrollHeight;
+        });
+      });
     }
   </script>
 </body>
 </html>
-
