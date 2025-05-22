@@ -21,6 +21,16 @@ body {
   border-bottom: 2px solid #004400;
   padding: 5px 0;
 }
+#notification-badge {
+  display: inline-block;
+  background-color: #e33;  /* bright red */
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.7);
+}
 
 .tab-button {
   color: white;
@@ -126,7 +136,11 @@ p {
     <a class="tab-button" href="all-games.html">User Games</a>
     <a class="tab-button" href="#" id="earn-btn">Get Cube Bucks</a>
     <a class="tab-button" href="#" id="profile-btn">Search a Profile</a>
-    <a class="tab-button" href="messages.html">Message and Friends</a>
+   <a class="tab-button" href="messages.html" id="messages-friends-btn">
+  Message and Friends
+  <span id="notification-badge" style="display:none;"></span>
+</a>
+
   </div>
 
   <div class="content">
