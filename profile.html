@@ -306,7 +306,8 @@ async function loadProfile() {
   const friendsHtml = friendUsernames.length > 0
   friendUsernames.map(name => `<li>${name}</li>`).join("")
 
-    : "<li>No friends</li>";
+: `<li>No friends</li>`;
+
 
   document.getElementById("profileData").innerHTML = 
     <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
