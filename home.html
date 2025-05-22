@@ -11,31 +11,45 @@
       background: #d9f5c8;
     }
 
-    .topbar {
-      background: linear-gradient(to bottom, #017a00, #005900); /* darker green gradient */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 40px;
-      border-bottom: 2px solid #004400;
-    }
+.topbar {
+  background: linear-gradient(to bottom, #017a00, #005900); /* darker green gradient */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  border-bottom: 2px solid #004400;
+}
 
-    .tab-button {
-      color: white;
-      background-color: #3dff33;
-      border: 1px solid #0a9900;
-      border-bottom: none;
-      padding: 5px 12px;
-      font-size: 14px;
-      margin: 0 2px;
-      cursor: pointer;
-      border-radius: 4px 4px 0 0;
-      text-decoration: none;
-    }
+.tab-button {
+  color: white;
+  background-color: #5cb85c; /* less intense green */
+  border: 1px solid #3e703e;
+  border-bottom: none;
+  padding: 5px 12px;
+  font-size: 14px;
+  margin: 0 2px;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
 
-    .tab-button:hover {
-      background-color: #53ff4d;
-    }
+.tab-button:hover {
+  background-color: #78c478; /* lighter hover green */
+}
+
+.banner-container {
+  text-align: center;
+  background: #4caf50; /* medium green background */
+  padding: 10px 0;
+  border-bottom: 2px solid #388e3c;
+}
+
+.banner-image {
+  height: 120px; /* keep bigger banner */
+  object-fit: contain;
+}
+
 
     .user-info {
       position: absolute;
@@ -45,17 +59,6 @@
       font-size: 12px;
     }
 
-    .banner-container {
-      text-align: center;
-      background: white;
-      padding: 6px 0;
-      border-bottom: 2px solid #0cb000;
-    }
-
-    .banner-image {
-      height: 120px; /* bigger banner */
-      object-fit: contain;
-    }
 
     .content {
       padding: 30px;
