@@ -107,6 +107,31 @@
       color: #555;
       margin-top: 50px;
     }
+
+    .send-box {
+  display: flex;
+  margin-top: 10px;
+}
+
+.message-input {
+  flex: 1;
+  padding: 8px;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.send-button {
+  background: #4caf50;
+  color: white;
+  padding: 8px 12px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 6px;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  cursor: pointer;
+}
+
   </style>
 </head>
 <body>
@@ -132,10 +157,11 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove,
-      onSnapshot, collection, query, orderBy
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+ import {
+  getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove,
+  onSnapshot, collection, query, orderBy, addDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -287,8 +313,32 @@
 
         const friendMessagesDiv = document.createElement("div");
         friendMessagesDiv.className = "friend-messages";
-        friendMessagesDiv.innerHTML = `<h3>${friendUsername}</h3><div class="messages-list"></div>`;
+      friendMessagesDiv.innerHTML = `
+  <h3>${friendUsername}</h3>
+  <div class="messages-list"></div>
+  <div class="send-box">
+    <input type="text" class="message-input" placeholder="Type a message..." />
+    <button class="send-button">Send</button>
+  </div>
+      `;
+    const input = friendMessagesDiv.querySelector(".message-input");
+const sendBtn = friendMessagesDiv.querySelector(".send-button");
 
+sendBtn.onclick = async () => {
+  const text = input.value.trim();
+  if (!text) return;
+
+  const conversationRef = collection(db, "messages", conversationId, "messages");
+  await addDoc(conversationRef, {
+    text,
+    sender: currentUserUid,
+    timestamp: new Date()
+  });
+
+  input.value = "";
+};
+
+  
         const messagesListDiv = friendMessagesDiv.querySelector(".messages-list");
         messagesContainer.appendChild(friendMessagesDiv);
 
