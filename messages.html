@@ -6,142 +6,220 @@
   <title>Messages & Friend Requests</title>
   <style>
     body {
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      background: #d9f5c8;
-      margin: 0; padding: 20px;
-    }
-    h2 {
-      text-align: center;
-    }
-    #tabs {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-    .tab-button {
-      padding: 10px 20px;
-      cursor: pointer;
-      border: none;
-      border-bottom: 3px solid transparent;
-      background: #a7d8a0;
-      font-weight: bold;
-      font-size: 16px;
-      margin: 0 10px;
-      border-radius: 5px 5px 0 0;
-    }
-    .tab-button.active {
-      border-bottom: 3px solid #4caf50;
-      background: #d0f1c4;
-    }
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  background: #d9f5c8;
+  margin: 0;
+  padding: 20px;
+  position: relative;
+}
 
-    /* Friend Requests */
-    .request {
-      background: white;
-      padding: 15px;
-      margin: 10px auto;
-      max-width: 400px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      border-radius: 5px;
-    }
-    .request p {
-      margin: 0 0 10px 0;
-      font-weight: bold;
-    }
-    button {
-      margin-right: 10px;
-      padding: 8px 15px;
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      color: white;
-    }
-    .accept-btn {
-      background: #4caf50;
-    }
-    .decline-btn {
-      background: #f44336;
-    }
-    #noRequests {
-      text-align: center;
-      margin-top: 30px;
-      font-style: italic;
-      color: #555;
-    }
+h2 {
+  text-align: center;
+}
 
-    /* Messages */
-    #messagesContainer {
-      max-width: 600px;
-      margin: 0 auto;
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      max-height: 500px;
-      overflow-y: auto;
-    }
-    .friend-messages {
-      margin-bottom: 30px;
-    }
-    .friend-messages h3 {
-      margin-bottom: 10px;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 5px;
-    }
-    .message {
-      background: #e2f0d9;
-      padding: 8px 12px;
-      margin-bottom: 6px;
-      border-radius: 12px;
-      max-width: 75%;
-      word-wrap: break-word;
-    }
-    .message.sent {
-      background: #c1e1a6;
-      margin-left: auto;
-      text-align: right;
-    }
-    #noMessages {
-      text-align: center;
-      font-style: italic;
-      color: #555;
-      margin-top: 50px;
-    }
+/* Top Bar with Tabs and Home Button */
+#topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
 
-    .send-box {
+#tabs {
+  display: flex;
+}
+
+#homeBtnContainer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+#homeBtn {
+  background: #4caf50;
+  padding: 10px 16px;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease;
+}
+
+#homeBtn:hover {
+  background: #388e3c;
+}
+
+/* Tab Buttons */
+.tab-button {
+  padding: 12px 24px;
+  cursor: pointer;
+  border: none;
+  border-bottom: 4px solid transparent;
+  background: #a7d8a0;
+  font-weight: bold;
+  font-size: 18px;
+  margin: 0 10px;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.tab-button.active {
+  border-bottom: 4px solid #4caf50;
+  background: #d0f1c4;
+}
+
+.tab-button:hover {
+  background: #c4e6b6;
+  border-bottom: 4px solid #2e7d32;
+}
+
+/* Friend Requests */
+.request {
+  background: white;
+  padding: 15px;
+  margin: 10px auto;
+  max-width: 400px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+}
+
+.request p {
+  margin: 0 0 10px 0;
+  font-weight: bold;
+}
+
+button {
+  margin-right: 10px;
+  padding: 10px 18px;
+  font-family: "Comic Sans MS", cursive, sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  transition: background 0.3s ease;
+}
+
+.accept-btn {
+  background: #4caf50;
+}
+
+.accept-btn:hover {
+  background: #388e3c;
+}
+
+.decline-btn {
+  background: #f44336;
+}
+
+.decline-btn:hover {
+  background: #d32f2f;
+}
+
+#noRequests {
+  text-align: center;
+  margin-top: 30px;
+  font-style: italic;
+  color: #555;
+}
+
+/* Messages */
+#messagesContainer {
+  max-width: 600px;
+  margin: 0 auto;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.friend-messages {
+  margin-bottom: 30px;
+}
+
+.friend-messages h3 {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 5px;
+}
+
+.message {
+  background: #e2f0d9;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  max-width: 75%;
+  word-wrap: break-word;
+}
+
+.message.sent {
+  background: #c1e1a6;
+  margin-left: auto;
+  text-align: right;
+}
+
+#noMessages {
+  text-align: center;
+  font-style: italic;
+  color: #555;
+  margin-top: 50px;
+}
+
+/* Send Box */
+.send-box {
   display: flex;
   margin-top: 10px;
 }
 
 .message-input {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   font-family: "Comic Sans MS", cursive, sans-serif;
   border: 1px solid #ccc;
   border-radius: 6px;
+  font-size: 15px;
 }
 
 .send-button {
   background: #4caf50;
   color: white;
-  padding: 8px 12px;
+  padding: 10px 14px;
   margin-left: 8px;
   border: none;
   border-radius: 6px;
   font-family: "Comic Sans MS", cursive, sans-serif;
   cursor: pointer;
+  font-size: 15px;
+  transition: background 0.3s ease;
 }
+
+.send-button:hover {
+  background: #388e3c;
+}
+
 
   </style>
 </head>
 <body>
   <h2>Messages & Friend Requests</h2>
 
+<div id="topBar">
   <div id="tabs">
     <button class="tab-button active" id="tabRequestsBtn">Friend Requests</button>
     <button class="tab-button" id="tabMessagesBtn">Messages</button>
-      <div><button onclick="window.location.href='home.html'">Home</button></div>
   </div>
+  <div id="homeBtnContainer">
+    <button id="homeBtn" onclick="window.location.href='home.html'">Home</button>
+  </div>
+</div>
+
 
   <div id="tabRequests" style="display: block;">
     <div id="requestsContainer">
