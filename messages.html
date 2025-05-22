@@ -460,32 +460,6 @@ button {
   }
 }
 
-
-  
-        const messagesListDiv = friendMessagesDiv.querySelector(".messages-list");
-        messagesContainer.appendChild(friendMessagesDiv);
-
-        // Listen to messages in real-time for this friend
-        onSnapshot(messagesQuery, snapshot => {
-          messagesListDiv.innerHTML = "";
-          if (snapshot.empty) {
-            messagesListDiv.innerHTML = "<p><i>No messages yet.</i></p>";
-            return;
-          }
-          snapshot.forEach(docSnap => {
-            const msg = docSnap.data();
-            const messageDiv = document.createElement("div");
-            messageDiv.className = "message";
-            if (msg.sender === currentUserUid) messageDiv.classList.add("sent");
-            messageDiv.textContent = msg.text;
-            messagesListDiv.appendChild(messageDiv);
-          });
-
-          // Scroll to bottom
-          messagesListDiv.scrollTop = messagesListDiv.scrollHeight;
-        });
-      });
-    }
   </script>
 </body>
 </html>
