@@ -11,7 +11,11 @@
       background: #d9f5c8;
     }
 
-  .navbar {
+.left-space {
+  width: 200px; /* Adjust as needed */
+}
+
+.navbar {
   background: #4CAF50;
   color: white;
   padding: 10px 20px;
@@ -20,15 +24,26 @@
   justify-content: space-between;
   position: relative;
   height: 130px;
+  z-index: 1;
 }
-
 
 .banner-container {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  pointer-events: none; /* So it doesn't block button clicks */
   z-index: 0;
 }
+
+.user-info {
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1;
+  white-space: nowrap;
+}
+
 
 .banner-image {
   height: 120px;
@@ -39,13 +54,7 @@
   font-weight: bold;
 }
 
- .user-info {
-  font-size: 0.9em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 1; /* Ensure it shows above the banner */
-}
+
 
     .content {
       padding: 30px;
@@ -92,12 +101,15 @@
 </head>
 <body>
   <div class="navbar">
-   <div class="banner-container">
-  <img src="https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/BrickBugsBanner2.png" alt="BrickBugs Banner" class="banner-image" />
-</div>
+    <div class="left-space"></div> <!-- This pushes user-info to the right -->
+
+    <div class="banner-container">
+      <img src="https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/BrickBugsBanner2.png" alt="BrickBugs Banner" class="banner-image" />
+    </div>
 
     <div class="user-info" id="user-info">Loading...</div>
   </div>
+
 
   <div class="content">
     <h2>Welcome to BrickBugs!</h2>
