@@ -3,433 +3,320 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BrickBugs Profile Viewer</title>
+  <title>Profile Viewer with Messages</title>
   <style>
     body {
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      background: #d9f5c8;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-
-    .profile-box {
-      background: white;
-      padding: 30px;
-      /* Removed rounded corfners */
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      font-family: Arial, sans-serif;
+      background-color: #252526;
+      color: white;
+      margin: 0; padding: 0;
       text-align: center;
     }
-
-    input[type="text"], textarea {
-      padding: 10px;
-      width: 90%;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      /* Removed border-radius */
-      font-family: "Comic Sans MS", cursive, sans-serif;
-    }
-
-    textarea {
-      resize: vertical;
-    }
-
-    button {
-      padding: 10px 20px;
-      border: none;
-      /* Removed border-radius */
-      margin: 10px 5px 0;
-      font-size: 1em;
-      cursor: pointer;
-      font-family: "Comic Sans MS", cursive, sans-serif;
-    }
-
-    .like-btn {
-      background: #66bb6a;
-      color: white;
-    }
-
-    .dislike-btn {
-      background: #ef5350;
-      color: white;
-    }
-
     .home-btn {
-      background: #42a5f5;
+      margin: 6px;
+      padding: 8px 14px;
+      font-size: 18px;
+      font-weight: 900;
+      border-radius: 6px;
+      border: none;
+      background-color: #3a3a3a;
       color: white;
-    }
-
-    .save-btn {
-      background: #ffa726;
-      color: white;
-    }
-
-    .likes, .dislikes, p {
-      margin: 10px 0;
-    }
-
-    /* Avatar styles */
-   .avatar-container {
-  margin: 20px auto;
-  position: relative; /* Make it relative for correct positioning */
-  width: 150px;
-  height: 150px;
-}
-
-.avatar-cube {
-  width: 150px;
-  height: 150px;
-  background-color: #3498db;
-  box-shadow: 0 0 10px rgba(0,0,0,0.3);
-  position: relative; /* Needed so the face appears correctly on top */
-  z-index: 1;
-}
-
-.avatar-face {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  z-index: 2;
-  pointer-events: none;
-  user-select: none;
-  object-fit: contain;
-}
-
-
-    .avatar-hat {
-      position: absolute;
-      top: -40px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px;
-      pointer-events: none;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
       user-select: none;
-      border: none !important;
-      box-shadow: none !important;
-      transition: filter 0.3s ease;
-      z-index: 2;
-      display: none;
+      max-width: 80vw;
+      overflow-wrap: break-word;
     }
-
+    .home-btn:hover {
+      background-color: #6c6c6c;
+    }
+    .home-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .profile-box {
+      max-width: 500px;
+      margin: 20px auto;
+      background-color: #3a3a3a;
+      border-radius: 6px;
+      padding: 20px;
+      text-align: center;
+    }
+    .profile-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      background-color: #555;
+      margin: 0 auto 10px auto;
+    }
+    #messagesSection {
+      margin-top: 20px;
+      text-align: left;
+      max-height: 300px;
+      overflow-y: auto;
+      border-top: 1px solid #666;
+      padding-top: 10px;
+    }
+    #messagesList {
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      background: #222;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    #messageInput {
+      width: 90%;
+      border-radius: 6px;
+      border: none;
+      padding: 6px 8px;
+      font-size: 16px;
+      resize: vertical;
+      font-family: Arial, sans-serif;
+    }
   </style>
 </head>
 <body>
 
-  <div class="profile-box">
-    <h2>Search Profile</h2>
-    <input type="text" id="usernameInput" placeholder="Enter username..." />
-    <br />
-    <button id="searchBtn">Search</button>
+  <button id="refreshBtn" class="home-btn">Refresh</button>
+  <button id="returnHomeBtn" class="home-btn">Home</button>
 
-    <button class="home-btn" onclick="window.location.href='home.html'">Home</button>
+  <div class="profile-box" id="profileBox">
+    <img id="profileImg" class="profile-img" src="https://www.roblox.com/Thumbs/Avatar.ashx?username=UnknownUser&x=150&y=150" alt="Profile Picture" />
+    <h2 id="profileName">Loading...</h2>
+    <p id="profileStatus">Status: Unknown</p>
+    <p id="profileCreated">Created: Unknown</p>
+    <p id="profileRep">Termipoints: 0</p>
+    <p id="profileLikes">Ladybugs (Likes): 0</p>
+    <p id="profileDislikes">Stink Bugs (Dislikes): 0</p>
+    <p id="profileAbout"></p>
 
-    <div id="profileData" style="margin-top: 20px;"></div>
+    <div id="messagesSection" style="display:none;">
+      <h4>Messages</h4>
+      <div id="messagesList">Loading messages...</div>
+      <textarea id="messageInput" rows="3" placeholder="Write a message..."></textarea>
+      <br />
+      <button id="sendMsgBtn" class="home-btn" style="width: 90%;">Send Message</button>
+    </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, arrayUnion, arrayRemove
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, addDoc, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-      authDomain: "gametest2-ba5fe.firebaseapp.com",
-      projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.appspot.com",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUserUid = null;
-    let currentProfileUid = null;
-    let currentProfileData = null;
-    let hatsMap = new Map(); // id => hat data
-    let facesMap = new Map(); // id => face data
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const searchBtn = document.getElementById("searchBtn");
-      searchBtn.addEventListener("click", searchByUsername);
-    });
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUserUid = user.uid;
-        loadHats();
-      } else {
-        window.location.href = "index.html";
-      }
-    });
-
-    async function loadHats() {
-  const hatsCol = collection(db, "hats");
-  const hatsSnapshot = await getDocs(hatsCol);
-  hatsMap.clear();
-  hatsSnapshot.forEach(doc => {
-    hatsMap.set(doc.id, doc.data());
-  });
-
-  const facesCol = collection(db, "faces");
-  const facesSnapshot = await getDocs(facesCol);
-  facesMap.clear();
-  facesSnapshot.forEach(doc => {
-    facesMap.set(doc.id, doc.data());
-  });
-}
-
-async function getFriendUsernames(friendUids) {
-  if (!friendUids || friendUids.length === 0) return [];
-
-  // Batch get all friend docs
-  const friendUsernames = [];
-  for (const friendUid of friendUids) {
-    const friendDoc = await getDoc(doc(db, "users", friendUid));
-    if (friendDoc.exists()) {
-      const friendData = friendDoc.data();
-      friendUsernames.push(friendData.username || "Unnamed");
-    } else {
-      friendUsernames.push("Unknown User");
-    }
-  }
-  return friendUsernames;
-}
-
-    window.searchByUsername = async function () {
-      const username = document.getElementById("usernameInput").value.trim();
-      if (!username) return alert("Enter a username");
-
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
-        document.getElementById("profileData").innerHTML = "User not found.";
-        return;
-      }
-
-      const docSnap = snapshot.docs[0];
-      currentProfileUid = docSnap.id;
-      currentProfileData = docSnap.data();
-      loadProfile();
-    };
-
-   function renderAvatar(data) {
-  const avatarColor = data.avatarColor || "#3498db";
-  const equippedHatId = data.equippedHat || "";
-  const equippedFaceId = data.equippedFace || "";
-
-  let hatImgSrc = "";
-  if (equippedHatId && hatsMap.has(equippedHatId)) {
-    const hat = hatsMap.get(equippedHatId);
-    hatImgSrc = hat.imageUrl || "";
-  }
-
-  let faceImgSrc = "";
-  if (equippedFaceId && facesMap.has(equippedFaceId)) {
-    const face = facesMap.get(equippedFaceId);
-    faceImgSrc = face.imageUrl || "";
-  } else {
-    faceImgSrc = "https://i.imgur.com/LJxWQyZ.png"; // default face
-  }
-
-  return `
-    <div class="avatar-container">
-      <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
-      <img src="${faceImgSrc}" alt="Face" class="avatar-face" />
-      ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
-    </div>
-  `;
-}
-
-window.searchByUsername = async function () {
-  const username = document.getElementById("usernameInput").value.trim();
-  if (!username) {
-    alert("Enter a username");
-    return;
-  }
-
-  const usersRef = collection(db, "users");
-  const q = query(usersRef, where("username", "==", username));
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    currentProfileUid = null;
-    currentProfileData = null;
-    document.getElementById("profileData").innerHTML = "<p>User not found.</p>";
-    return;
-  }
-
-  const docSnap = snapshot.docs[0];
-  currentProfileUid = docSnap.id;
-  currentProfileData = docSnap.data();
-  loadProfile();
+  const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.firebasestorage.app",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
 };
 
-async function loadProfile() {
-  if (!currentProfileData) {
-    document.getElementById("profileData").innerHTML = ""; // Clear if no data
-    return;
-  }
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  const data = currentProfileData;
-  const uid = currentProfileUid;
-  const likes = data.likes || 0;
-  const dislikes = data.dislikes || 0;
-  const termipoints = likes - dislikes;
-  const bio = data.bio || "";
+    // -- GLOBAL STATE --
+    let currentUserUid = "currentUser123";  // Replace with actual logged-in user UID
+    let currentProfileUid = null;
 
-  const userHasLiked = (data.likedBy || []).includes(currentUserUid);
-  const userHasDisliked = (data.dislikedBy || []).includes(currentUserUid);
-  const isOwnProfile = currentUserUid === uid;
-  const alreadyRequested = (data.friendRequests || []).includes(currentUserUid);
-  const alreadyFriends = (data.friends || []).includes(currentUserUid);
-
-  // Fetch friend usernames
-  const friendUsernames = await getFriendUsernames(data.friends || []);
-
-  // Create friend list HTML
-  const friendsHtml = friendUsernames.length > 0
-    ? friendUsernames.map(name => `<li>${name}</li>`).join("")
-    : "<li>No friends</li>";
-
-  document.getElementById("profileData").innerHTML = `
-    <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
-    ${renderAvatar(data)}
-    <p>Cube Bucks: ${data.cubeBucks || 0}</p>
-    <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
-
-    ${
-      !isOwnProfile
-        ? `<button id="friendRequestBtn" class="home-btn" ${alreadyRequested || alreadyFriends ? "disabled" : ""}>
-            ${
-              alreadyFriends
-                ? "You are friends"
-                : alreadyRequested
-                ? "Request Sent"
-                : "Send Friend Request"
-            }
-          </button>`
-        : ""
+    // Utils to get query param from URL (e.g. ?user=someUid)
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
     }
 
-    <p><strong>Termipoints:</strong> ${termipoints}</p>
-
-    ${
-      isOwnProfile
-        ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
-           <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
-        : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`
-    }
-
-    <p><strong>Friends:</strong></p>
-    <ul>${friendsHtml}</ul>
-
-    <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? "Undo Like" : "Like"}</button>
-    <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? "Undo Dislike" : "Dislike"}</button>
-  `;
-
-  // Attach friend request click handler if button exists and enabled
-  const friendRequestBtn = document.getElementById("friendRequestBtn");
-  if (friendRequestBtn && !friendRequestBtn.disabled) {
-    friendRequestBtn.onclick = async () => {
-      if (!currentProfileUid || currentProfileUid === currentUserUid) {
-        alert("Cannot send friend request to yourself.");
-        return;
-      }
-
-      const otherUserRef = doc(db, "users", currentProfileUid);
-      const otherSnap = await getDoc(otherUserRef);
-      if (!otherSnap.exists()) {
-        alert("User does not exist.");
-        return;
-      }
-      const otherData = otherSnap.data();
-
-      if ((otherData.friendRequests || []).includes(currentUserUid)) {
-        alert("Friend request already sent.");
-        return;
-      }
-      if ((otherData.friends || []).includes(currentUserUid)) {
-        alert("You are already friends.");
-        return;
-      }
-
-      await updateDoc(otherUserRef, {
-        friendRequests: arrayUnion(currentUserUid),
+    // Escape HTML to prevent injection
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text.replace(/[&<>"']/g, function(m) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
       });
+    }
 
-      alert("Friend request sent!");
-
-      // Disable button and update text after sending
-      friendRequestBtn.disabled = true;
-      friendRequestBtn.textContent = "Request Sent";
-    };
-  }
-}
-
-
-
-    window.toggleLike = async function (uid) {
-      const ref = doc(db, "users", uid);
-      const snap = await getDoc(ref);
-      const data = snap.data();
-      const liked = (data.likedBy || []).includes(currentUserUid);
-
-      const updates = {};
-      if (liked) {
-        updates.likes = (data.likes || 1) - 1;
-        updates.likedBy = arrayRemove(currentUserUid);
-      } else {
-        updates.likes = (data.likes || 0) + 1;
-        updates.likedBy = arrayUnion(currentUserUid);
+    // Load Profile info by UID
+    async function loadProfile(uid) {
+      currentProfileUid = uid;
+      if (!uid) {
+        alert("No user ID provided.");
+        return;
       }
-      await updateDoc(ref, updates);
-      currentProfileData = (await getDoc(ref)).data();
-      loadProfile();
-    };
 
-    window.toggleDislike = async function (uid) {
-      const ref = doc(db, "users", uid);
-      const snap = await getDoc(ref);
-      const data = snap.data();
-      const disliked = (data.dislikedBy || []).includes(currentUserUid);
+      const profileNameEl = document.getElementById("profileName");
+      const profileImgEl = document.getElementById("profileImg");
+      const profileStatusEl = document.getElementById("profileStatus");
+      const profileCreatedEl = document.getElementById("profileCreated");
+      const profileRepEl = document.getElementById("profileRep");
+      const profileLikesEl = document.getElementById("profileLikes");
+      const profileDislikesEl = document.getElementById("profileDislikes");
+      const profileAboutEl = document.getElementById("profileAbout");
 
-      const updates = {};
-      if (disliked) {
-        updates.dislikes = (data.dislikes || 1) - 1;
-        updates.dislikedBy = arrayRemove(currentUserUid);
-      } else {
-        updates.dislikes = (data.dislikes || 0) + 1;
-        updates.dislikedBy = arrayUnion(currentUserUid);
+      profileNameEl.textContent = "Loading...";
+      profileStatusEl.textContent = "Status: Loading...";
+      profileCreatedEl.textContent = "Created: Loading...";
+      profileRepEl.textContent = "Termipoints: Loading...";
+      profileLikesEl.textContent = "Ladybugs (Likes): Loading...";
+      profileDislikesEl.textContent = "Stink Bugs (Dislikes): Loading...";
+      profileAboutEl.textContent = "";
+
+      try {
+        const docRef = doc(db, "profiles", uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+
+          profileNameEl.textContent = data.name || "Unknown";
+          profileImgEl.src = `https://www.roblox.com/Thumbs/Avatar.ashx?username=${encodeURIComponent(data.name)}&x=150&y=150`;
+          profileImgEl.alt = `${data.name}'s Profile Picture`;
+
+          profileStatusEl.textContent = `Status: ${data.status || "None"}`;
+          const createdDate = data.created ? new Date(data.created.seconds * 1000).toLocaleDateString() : "Unknown";
+          profileCreatedEl.textContent = `Created: ${createdDate}`;
+          profileRepEl.textContent = `Termipoints: ${data.termipoints || 0}`;
+          profileLikesEl.textContent = `Ladybugs (Likes): ${Array.isArray(data.likes) ? data.likes.length : 0}`;
+          profileDislikesEl.textContent = `Stink Bugs (Dislikes): ${Array.isArray(data.dislikes) ? data.dislikes.length : 0}`;
+          profileAboutEl.textContent = data.about || "";
+
+          // Setup messaging section visibility and listener
+          setupMessagesListener(uid);
+        } else {
+          profileNameEl.textContent = "User not found";
+          profileStatusEl.textContent = "";
+          profileCreatedEl.textContent = "";
+          profileRepEl.textContent = "";
+          profileLikesEl.textContent = "";
+          profileDislikesEl.textContent = "";
+          profileAboutEl.textContent = "";
+          document.getElementById("messagesSection").style.display = "none";
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        alert("Failed to load profile.");
       }
-      await updateDoc(ref, updates);
-      currentProfileData = (await getDoc(ref)).data();
-      loadProfile();
-    };
+    }
 
-    window.saveBio = async function (uid) {
-      const bioText = document.getElementById("bioInput").value.trim();
-      const ref = doc(db, "users", uid);
+    // Messaging system:
+    let unsubscribeMessages = null;
 
-      await updateDoc(ref, { bio: bioText });
-      currentProfileData.bio = bioText;
-      loadProfile();
-    };
+    function setupMessagesListener(profileUid) {
+      // Hide if no current user or viewing own profile
+      if (!currentUserUid || !profileUid || currentUserUid === profileUid) {
+        document.getElementById("messagesSection").style.display = "none";
+        if (unsubscribeMessages) unsubscribeMessages();
+        return;
+      }
 
+      document.getElementById("messagesSection").style.display = "block";
+
+      if (unsubscribeMessages) unsubscribeMessages();
+
+      // Listen to last 20 messages between currentUserUid and profileUid
+      const messagesRef = collection(db, "messages");
+      const q = query(
+        messagesRef,
+        where("participants", "array-contains", currentUserUid),
+        orderBy("timestamp", "desc"),
+        limit(50)
+      );
+
+      unsubscribeMessages = onSnapshot(q, (snapshot) => {
+        const msgs = [];
+        snapshot.forEach(docSnap => {
+          const m = docSnap.data();
+          if (m.participants.includes(profileUid)) {
+            msgs.push(m);
+          }
+        });
+        // Sort ascending by timestamp for display
+        msgs.sort((a, b) => a.timestamp?.toMillis() - b.timestamp?.toMillis());
+        renderMessages(msgs);
+      });
+    }
+
+    function renderMessages(messages) {
+      const container = document.getElementById("messagesList");
+      if (!container) return;
+
+      if (messages.length === 0) {
+        container.innerHTML = "<p style='color:#aaa;'>No messages yet.</p>";
+        return;
+      }
+
+      container.innerHTML = messages.map(m => {
+        const fromMe = m.from === currentUserUid;
+        const senderLabel = fromMe ? "You" : "Them";
+        const text = escapeHtml(m.content);
+        const time = m.timestamp?.toDate().toLocaleString() || "";
+        return `
+          <div style="margin-bottom:8px; text-align:${fromMe ? "right" : "left"};">
+            <small><strong>${senderLabel}</strong> <em style="font-size:0.75em; color:#999;">${time}</em></small>
+            <div style="
+              background:${fromMe ? "#4CAF50" : "#555"};
+              color: white;
+              padding: 6px 12px;
+              border-radius: 10px;
+              display: inline-block;
+              max-width: 80%;
+              word-wrap: break-word;
+            ">
+              ${text}
+            </div>
+          </div>
+        `;
+      }).join("");
+      container.scrollTop = container.scrollHeight; // auto scroll to bottom
+    }
+
+    document.getElementById("sendMsgBtn").addEventListener("click", async () => {
+      const content = document.getElementById("messageInput").value.trim();
+      if (!content) {
+        alert("Message cannot be empty.");
+        return;
+      }
+      if (!currentUserUid || !currentProfileUid || currentUserUid === currentProfileUid) {
+        alert("Cannot send message.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "messages"), {
+          from: currentUserUid,
+          to: currentProfileUid,
+          content,
+          timestamp: new Date(),
+          participants: [currentUserUid, currentProfileUid]
+        });
+        document.getElementById("messageInput").value = "";
+      } catch (e) {
+        alert("Failed to send message: " + e.message);
+      }
+    });
+
+    // Navigation buttons
+    document.getElementById("returnHomeBtn").addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      if (currentProfileUid) {
+        loadProfile(currentProfileUid);
+      }
+    });
+
+    // On page load: get user from query param and load
+    window.addEventListener("DOMContentLoaded", () => {
+      const uidFromParam = getQueryParam("user");
+      if (!uidFromParam) {
+        alert("No user specified in URL (e.g. ?user=someUserId)");
+        return;
+      }
+      loadProfile(uidFromParam);
+    });
   </script>
+
 </body>
 </html>
