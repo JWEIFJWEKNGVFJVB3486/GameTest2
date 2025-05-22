@@ -191,6 +191,22 @@
   });
 }
 
+async function getFriendUsernames(friendUids) {
+  if (!friendUids || friendUids.length === 0) return [];
+
+  // Batch get all friend docs
+  const friendUsernames = [];
+  for (const friendUid of friendUids) {
+    const friendDoc = await getDoc(doc(db, "users", friendUid));
+    if (friendDoc.exists()) {
+      const friendData = friendDoc.data();
+      friendUsernames.push(friendData.username || "Unnamed");
+    } else {
+      friendUsernames.push("Unknown User");
+    }
+  }
+  return friendUsernames;
+}
 
     window.searchByUsername = async function () {
       const username = document.getElementById("usernameInput").value.trim();
@@ -282,6 +298,14 @@ async function loadProfile() {
   const alreadyRequested = (data.friendRequests || []).includes(currentUserUid);
   const alreadyFriends = (data.friends || []).includes(currentUserUid);
 
+  // Fetch friend usernames
+  const friendUsernames = await getFriendUsernames(data.friends || []);
+
+  // Create friend list HTML
+  const friendsHtml = friendUsernames.length > 0
+    ? friendUsernames.map(name => `<li>${name}</li>`).join("")
+    : "<li>No friends</li>";
+
   document.getElementById("profileData").innerHTML = `
     <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
     ${renderAvatar(data)}
@@ -303,13 +327,16 @@ async function loadProfile() {
     }
 
     <p><strong>Termipoints:</strong> ${termipoints}</p>
-    
+
     ${
       isOwnProfile
         ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
            <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
         : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`
     }
+
+    <p><strong>Friends:</strong></p>
+    <ul>${friendsHtml}</ul>
 
     <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? "Undo Like" : "Like"}</button>
     <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? "Undo Dislike" : "Dislike"}</button>
