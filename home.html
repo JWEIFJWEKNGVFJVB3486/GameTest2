@@ -11,53 +11,68 @@
       background: #d9f5c8;
     }
 
-.left-space {
-  width: 200px; /* Adjust as needed */
-}
+    .navbar {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px 0 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
 
-.navbar {
-  background: #4CAF50;
-  color: white;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  height: 130px;
-  z-index: 1;
-}
+    .banner-container {
+      position: relative;
+      z-index: 0;
+      text-align: center;
+    }
 
-.banner-container {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none; /* So it doesn't block button clicks */
-  z-index: 0;
-}
+    .banner-image {
+      height: 150px;
+      object-fit: contain;
+    }
 
-.user-info {
-  font-size: 1.2em;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 1;
-  white-space: nowrap;
-}
+    .user-info {
+      font-size: 1.2em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      z-index: 2;
+    }
 
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      z-index: 1;
+    }
 
-.banner-image {
-  height: 150px;
-  object-fit: contain;
-}
+    .nav-tabs button {
+      background: #a2e57b;
+      color: black;
+      border: 2px solid #4CAF50;
+      padding: 10px 14px;
+      cursor: pointer;
+      border-radius: 10px;
+      font-size: 1em;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+      white-space: nowrap;
+    }
 
- .logo {
-  font-weight: bold;
-}
+    .nav-tabs button:hover {
+      background: #c2f0a4;
+    }
 
     .content {
       padding: 30px;
       text-align: center;
-       z-index: 1;
     }
 
     h2 {
@@ -99,26 +114,26 @@
 </head>
 <body>
   <div class="navbar">
-    <div class="left-space"></div> <!-- This pushes user-info to the right -->
-
     <div class="banner-container">
       <img src="https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/BrickBugsBanner2.png" alt="BrickBugs Banner" class="banner-image" />
     </div>
 
     <div class="user-info" id="user-info">Loading...</div>
-  </div>
 
+    <div class="nav-tabs">
+      <button onclick="window.location.href='multiplayergame.html'">Play Cube Sandbox</button>
+      <button onclick="window.location.href='forums.html'">Forums</button>
+      <button onclick="window.location.href='shop.html'">Shop</button>
+      <button onclick="window.location.href='avatar.html'">Customize Avatar</button>
+      <button onclick="window.location.href='create-game.html'">Create a Game</button>
+      <button onclick="window.location.href='all-games.html'">User Created Games</button>
+    </div>
+  </div>
 
   <div class="content">
     <h2>Welcome to BrickBugs!</h2>
     <p>This is your account dashboard. CREDIT TO Dlux_Aj for the art!</p>
     <button id="earn-btn">Get Cube Bucks</button><br>
-    <button onclick="window.location.href='multiplayergame.html'">Play Cube Sandbox</button>
-    <button onclick="window.location.href='forums.html'">Forums</button>
-    <button onclick="window.location.href='shop.html'">Shop</button>
-   <button onclick="window.location.href='avatar.html'">Customize your avatar</button>
-   <button onclick="window.location.href='create-game.html'">Create a game</button>
-    <button onclick="window.location.href='all-games.html'">User Created Games</button>
     <button id="profile-btn">Search A Profile</button>
   </div>
 
@@ -143,42 +158,41 @@
     const db = getFirestore(app);
     let currentUserUid = null;
 
-   onAuthStateChanged(auth, async (user) => {
-  const userInfo = document.getElementById("user-info");
-  if (user) {
-    currentUserUid = user.uid;
+    onAuthStateChanged(auth, async (user) => {
+      const userInfo = document.getElementById("user-info");
+      if (user) {
+        currentUserUid = user.uid;
 
-    document.getElementById("profile-btn").onclick = () => {
-      window.location.href = `profile.html?uid=${user.uid}`;
-    };
+        document.getElementById("profile-btn").onclick = () => {
+          window.location.href = `profile.html?uid=${user.uid}`;
+        };
 
-    const userRef = doc(db, "users", user.uid);
-    try {
-      const docSnap = await getDoc(userRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.cubeBucks === undefined) {
-          await setDoc(userRef, { cubeBucks: 0 }, { merge: true });
-          data.cubeBucks = 0;
+        const userRef = doc(db, "users", user.uid);
+        try {
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.cubeBucks === undefined) {
+              await setDoc(userRef, { cubeBucks: 0 }, { merge: true });
+              data.cubeBucks = 0;
+            }
+
+            userInfo.innerHTML = `
+              ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
+              Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
+              <button onclick="logout()">Logout</button>
+            `;
+          } else {
+            userInfo.textContent = "User data not found.";
+          }
+        } catch (err) {
+          console.error("Error getting user data:", err);
+          userInfo.textContent = "Error loading data.";
         }
-
-        userInfo.innerHTML = `
-          ${data.username || "Unnamed"} (${data.gender || "N/A"}) |
-          Cube Bucks: <span id="cube-bucks">${data.cubeBucks}</span>
-          <button onclick="logout()">Logout</button>
-        `;
       } else {
-        userInfo.textContent = "User data not found.";
+        window.location.href = "index.html";
       }
-    } catch (err) {
-      console.error("Error getting user data:", err);
-      userInfo.textContent = "Error loading data.";
-    }
-  } else {
-    window.location.href = "index.html";
-  }
-});
-
+    });
 
     window.logout = function () {
       signOut(auth).then(() => {
