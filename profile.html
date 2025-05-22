@@ -208,24 +208,30 @@ async function getFriendUsernames(friendUids) {
   return friendUsernames;
 }
 
-    window.searchByUsername = async function () {
-      const username = document.getElementById("usernameInput").value.trim();
-      if (!username) return alert("Enter a username");
+  window.searchByUsername = async function () {
+  const username = document.getElementById("usernameInput").value.trim();
+  if (!username) {
+    alert("Enter a username");
+    return;
+  }
 
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const snapshot = await getDocs(q);
+  const usersRef = collection(db, "users");
+  const q = query(usersRef, where("username", "==", username));
+  const snapshot = await getDocs(q);
 
-      if (snapshot.empty) {
-        document.getElementById("profileData").innerHTML = "User not found.";
-        return;
-      }
+  if (snapshot.empty) {
+    currentProfileUid = null;
+    currentProfileData = null;
+    document.getElementById("profileData").innerHTML = "<p>User not found.</p>";
+    return;
+  }
 
-      const docSnap = snapshot.docs[0];
-      currentProfileUid = docSnap.id;
-      currentProfileData = docSnap.data();
-      loadProfile();
-    };
+  const docSnap = snapshot.docs[0];
+  currentProfileUid = docSnap.id;
+  currentProfileData = docSnap.data();
+  loadProfile();
+};
+
 
   function renderAvatar(data) {
   const avatarColor = data.avatarColor || "#3498db";
@@ -304,12 +310,10 @@ async function loadProfile() {
 
   // Create friend list HTML
   const friendsHtml = friendUsernames.length > 0
-  friendUsernames.map(name => `<li>${name}</li>`).join("")
+    ? friendUsernames.map(name => `<li>${name}</li>`).join("")
+    : `<li>No friends</li>`;
 
-: `<li>No friends</li>`;
-
-
-  document.getElementById("profileData").innerHTML = 
+  document.getElementById("profileData").innerHTML = `
     <h3>${data.username || "Unnamed"} (${data.gender || "N/A"})</h3>
     ${renderAvatar(data)}
     <p>Cube Bucks: ${data.cubeBucks || 0}</p>
@@ -317,7 +321,7 @@ async function loadProfile() {
 
     ${
       !isOwnProfile
-        ? <button id="friendRequestBtn" class="home-btn" ${alreadyRequested || alreadyFriends ? "disabled" : ""}>
+        ? `<button id="friendRequestBtn" class="home-btn" ${alreadyRequested || alreadyFriends ? "disabled" : ""}>
             ${
               alreadyFriends
                 ? "You are friends"
@@ -325,7 +329,7 @@ async function loadProfile() {
                 ? "Request Sent"
                 : "Send Friend Request"
             }
-          </button>
+          </button>`
         : ""
     }
 
@@ -333,9 +337,9 @@ async function loadProfile() {
 
     ${
       isOwnProfile
-        ? <textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
-           <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>
-        : <p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>
+        ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
+           <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
+        : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`
     }
 
     <p><strong>Friends:</strong></p>
@@ -343,7 +347,7 @@ async function loadProfile() {
 
     <button class="like-btn" onclick="toggleLike('${uid}')">${userHasLiked ? "Undo Like" : "Like"}</button>
     <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? "Undo Dislike" : "Dislike"}</button>
-  ;
+  `;
 
   // Attach friend request click handler if button exists and enabled
   const friendRequestBtn = document.getElementById("friendRequestBtn");
@@ -377,13 +381,11 @@ async function loadProfile() {
 
       alert("Friend request sent!");
 
-      // Disable button and update text after sending
       friendRequestBtn.disabled = true;
       friendRequestBtn.textContent = "Request Sent";
     };
   }
 }
-
 
 
     window.toggleLike = async function (uid) {
