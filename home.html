@@ -70,26 +70,27 @@ body {
   align-items: center;
   gap: 10px;
   white-space: nowrap;
-  max-width: 320px;
+  max-width: 360px; /* a bit wider */
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .user-info button {
   font-family: "Comic Sans MS", cursive, sans-serif;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  font-size: 13px;
+  padding: 0;
   border: none;
-  background-color: #3e703e;
+  background: none;
   color: white;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  min-width: 60px;  /* ensure enough space for "Logout" */
+  text-align: right;
 }
 
 .user-info button:hover {
-  background-color: #5cb85c;
+  text-decoration: underline;
 }
+
 
 .content {
   padding: 20px 15px;
