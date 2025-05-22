@@ -72,11 +72,28 @@
       background: #ffb6c1;
       color: black;
     }
+
+    .banner-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.banner-image {
+  max-width: 100%;
+  max-height: 120px; /* Scales it down to fit like a normal header */
+  object-fit: contain;
+}
+
   </style>
 </head>
 <body>
   <div class="navbar">
-    <div class="logo">BrickBugs</div>
+   <div class="banner-container">
+  <img src="https://raw.githubusercontent.com/brickbugs/brickbug-assets/main/BrickBugsBanner.png" alt="BrickBugs Banner" class="banner-image" />
+</div>
+
     <div class="user-info" id="user-info">Loading...</div>
   </div>
 
