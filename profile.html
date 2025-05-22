@@ -227,7 +227,7 @@ async function getFriendUsernames(friendUids) {
       loadProfile();
     };
 
-   function renderAvatar(data) {
+  function renderAvatar(data) {
   const avatarColor = data.avatarColor || "#3498db";
   const equippedHatId = data.equippedHat || "";
   const equippedFaceId = data.equippedFace || "";
@@ -246,14 +246,15 @@ async function getFriendUsernames(friendUids) {
     faceImgSrc = "https://i.imgur.com/LJxWQyZ.png"; // default face
   }
 
-  return 
+  return `
     <div class="avatar-container">
       <div class="avatar-cube" style="background-color: ${avatarColor};"></div>
       <img src="${faceImgSrc}" alt="Face" class="avatar-face" />
-      ${hatImgSrc ? <img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" /> : ''}
+      ${hatImgSrc ? `<img src="${hatImgSrc}" alt="Equipped Hat" class="avatar-hat" style="display:block;" />` : ''}
     </div>
-  ;
+  `;
 }
+
 
 window.searchByUsername = async function () {
   const username = document.getElementById("usernameInput").value.trim();
