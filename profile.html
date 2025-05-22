@@ -256,8 +256,10 @@
         ${renderAvatar(data)}
         <p>Cube Bucks: ${data.cubeBucks || 0}</p>
         <p>Ladybugs: ${likes} | Stink Bugs: ${dislikes}</p>
-        <p><strong>Termipoints:</strong> ${termipoints}</p>
+        ${!isOwnProfile ? `<button class="home-btn" onclick="sendFriendRequest('${uid}')">Send Friend Request</button>` : ''}
 
+        <p><strong>Termipoints:</strong> ${termipoints}</p>
+        
         ${isOwnProfile
           ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
              <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
@@ -314,6 +316,45 @@
       currentProfileData.bio = bioText;
       loadProfile();
     };
+    window.sendFriendRequest = async function(targetUid) {
+  if (!currentUserUid) {
+    alert("You must be logged in to send friend requests.");
+    return;
+  }
+  if (currentUserUid === targetUid) {
+    alert("You cannot send a friend request to yourself.");
+    return;
+  }
+
+  const requestsRef = collection(db, "friendRequests");
+
+  // Check if a friend request already exists between currentUserUid and targetUid
+  const q = query(requestsRef,
+    where("fromUid", "==", currentUserUid),
+    where("toUid", "==", targetUid),
+    where("status", "==", "pending")
+  );
+  const querySnapshot = await getDocs(q);
+
+  if (!querySnapshot.empty) {
+    alert("Friend request already sent!");
+    return;
+  }
+
+  // Create friend request document
+  try {
+    await addDoc(requestsRef, {
+      fromUid: currentUserUid,
+      toUid: targetUid,
+      status: "pending", // pending, accepted, declined
+      timestamp: new Date()
+    });
+    alert("Friend request sent!");
+  } catch (error) {
+    alert("Failed to send friend request: " + error.message);
+  }
+};
+
   </script>
 </body>
 </html>
