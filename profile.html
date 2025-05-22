@@ -269,6 +269,47 @@
         <button class="dislike-btn" onclick="toggleDislike('${uid}')">${userHasDisliked ? 'Undo Dislike' : 'Dislike'}</button>
       `;
     }
+document.getElementById("profileData").innerHTML = `
+  ...
+  <button id="friendRequestBtn">Send Friend Request</button>
+  ...
+`;
+
+// Add event listener AFTER inserting the button
+const friendRequestBtn = document.getElementById("friendRequestBtn");
+if (friendRequestBtn) {
+  friendRequestBtn.onclick = async () => {
+    if (!currentProfileUid || currentProfileUid === currentUserUid) {
+      alert("Cannot send friend request to yourself.");
+      return;
+    }
+
+    // Add currentUserUid to the other user's friendRequests array
+    const otherUserRef = doc(db, "users", currentProfileUid);
+
+    // Check if already requested or friends
+    const otherSnap = await getDoc(otherUserRef);
+    if (!otherSnap.exists()) {
+      alert("User does not exist.");
+      return;
+    }
+    const otherData = otherSnap.data();
+    if ((otherData.friendRequests || []).includes(currentUserUid)) {
+      alert("Friend request already sent.");
+      return;
+    }
+    if ((otherData.friends || []).includes(currentUserUid)) {
+      alert("You are already friends.");
+      return;
+    }
+
+    await updateDoc(otherUserRef, {
+      friendRequests: arrayUnion(currentUserUid)
+    });
+
+    alert("Friend request sent!");
+  };
+}
 
     window.toggleLike = async function (uid) {
       const ref = doc(db, "users", uid);
@@ -316,40 +357,6 @@
       currentProfileData.bio = bioText;
       loadProfile();
     };
-const friendRequestBtn = document.getElementById("friendRequestBtn");
-
-friendRequestBtn.onclick = async () => {
-  if (!currentProfileUid || currentProfileUid === currentUserUid) {
-    alert("Cannot send friend request to yourself.");
-    return;
-  }
-
-  // Add currentUserUid to the other user's friendRequests array
-  const otherUserRef = doc(db, "users", currentProfileUid);
-
-  // Check if already requested or friends
-  const otherSnap = await getDoc(otherUserRef);
-  if (!otherSnap.exists()) {
-    alert("User does not exist.");
-    return;
-  }
-  const otherData = otherSnap.data();
-  if ((otherData.friendRequests || []).includes(currentUserUid)) {
-    alert("Friend request already sent.");
-    return;
-  }
-  if ((otherData.friends || []).includes(currentUserUid)) {
-    alert("You are already friends.");
-    return;
-  }
-
-  await updateDoc(otherUserRef, {
-    friendRequests: arrayUnion(currentUserUid)
-  });
-
-  alert("Friend request sent!");
-};
-
 
   </script>
 </body>
