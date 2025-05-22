@@ -304,7 +304,8 @@ async function loadProfile() {
 
   // Create friend list HTML
   const friendsHtml = friendUsernames.length > 0
-    ? friendUsernames.map(name => <li>${name}</li>).join("")
+  friendUsernames.map(name => `<li>${name}</li>`).join("")
+
     : "<li>No friends</li>";
 
   document.getElementById("profileData").innerHTML = 
