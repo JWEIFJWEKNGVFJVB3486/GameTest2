@@ -123,61 +123,53 @@
 
 <script type="module">
   
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  // Initialize Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-    authDomain: "gametest2-ba5fe.firebaseapp.com",
-    projectId: "gametest2-ba5fe",
-    storageBucket: "gametest2-ba5fe.appspot.com",
-    messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7",
-    databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com/"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.firebasestorage.app",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const firestore = getFirestore(app);
+const realtimeDb = getDatabase(app);
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const firestore = getFirestore(app);
-  const realtimeDb = getDatabase(app);
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const board = document.getElementById("board");
+const chatInput = document.getElementById("chatInput");
+const chatButton = document.getElementById("chatButton");
+const arrowUp = document.getElementById("arrowUp");
+const arrowDown = document.getElementById("arrowDown");
+const arrowLeft = document.getElementById("arrowLeft");
+const arrowRight = document.getElementById("arrowRight");
 
-  // DOM Elements
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
-  const board = document.getElementById("board");
-  const chatInput = document.getElementById("chatInput");
-  const gameArea = document.getElementById("gameArea");
-  const chatButton = document.getElementById("chatButton");
-  const arrowUp = document.getElementById("arrowUp");
-  const arrowDown = document.getElementById("arrowDown");
-  const arrowLeft = document.getElementById("arrowLeft");
-  const arrowRight = document.getElementById("arrowRight");
-
-  // Resize canvas full window
-  function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener("resize", resizeCanvas);
-  resizeCanvas();
-
-  // Player & state
-  let player = null;
-  let playerRef = null;
-  let players = {};
-  let keysPressed = {};
-  let chatVisible = false;
+let player = null;
+let playerRef = null;
+let players = {};
+let keysPressed = {};
+let chatVisible = false;
+let items = [];
 
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId');
-  
-let items = [];
 
-// Load items from Firestore game document by gameId
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
 async function loadBlocks() {
   if (!gameId) {
     console.error("No gameId in URL");
@@ -202,7 +194,6 @@ async function loadBlocks() {
     return;
   }
 
-  // Filter accepted item types just in case
   items = data.items.filter(item =>
     ["shape", "block", "circle", "text"].includes(item.type)
   );
@@ -210,7 +201,20 @@ async function loadBlocks() {
   console.log("Items loaded from Firestore:", items);
 }
 
-// Single draw function that draws all loaded items and players
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
 function draw() {
   if (!player) return;
 
@@ -220,14 +224,14 @@ function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Optional: draw camera viewport box for debugging
+  // Draw viewport border (optional)
   ctx.strokeStyle = 'red';
   ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
   ctx.translate(-camX, -camY);
 
-  // Draw loaded items
+  // Draw game items
   for (const item of items) {
     if (!item) continue;
     ctx.fillStyle = item.color || "#888";
@@ -269,209 +273,18 @@ function draw() {
     }
   }
 
-
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    const uid = user.uid;
-    const username = user.displayName || user.email || "Player";
-
-    await loadBlocks();          // Load items from Firestore
-    await setupPlayer(uid, username); // Setup player in RealtimeDB
-    update();                   // Start the game loop
-  } else {
-    console.log("User not logged in");
-    // Optionally redirect to login or show message
-  }
-
-  // Draw players (your existing code below)
-  for (const id in players) {
-    const p = players[id];
-    if (!p) continue;
-
-    ctx.fillStyle = p.color || "#000";
-    ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
-
-    ctx.fillStyle = "black";
-    ctx.font = "20px Comic Sans MS";
-    ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
-
-    if (p.chat && p.chat.trim() !== "") {
-      ctx.fillStyle = "white";
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 2;
-      const chatText = p.chat;
-      const textWidth = ctx.measureText(chatText).width;
-      const padding = 10;
-      const x = p.x - textWidth / 2 - padding / 2;
-      const y = p.y - 90;
-
-      ctx.fillRect(x, y - 24, textWidth + padding, 28);
-      ctx.strokeRect(x, y - 24, textWidth + padding, 28);
-
-      ctx.fillStyle = "black";
-      ctx.fillText(chatText, x + padding / 2, y - 6);
-    }
-  }
-})
-
-// Helper function for rounded rectangles
-function roundRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-}
-
-
-
-  // Call this once after auth confirmed
-  async function setupPlayer(uid, username) {
-    player = {
-      id: uid,
-      username,
-      x: 100,
-      y: 100,
-      color: "#008800",
-      chat: ""
-    };
-
-    playerRef = ref(realtimeDb, "players/" + uid);
-
-    // Write initial player data to RealtimeDB
-    await set(playerRef, {
-      username: player.username,
-      x: player.x,
-      y: player.y,
-      color: player.color,
-      chat: ""
-    });
-
-    onDisconnect(playerRef).remove();
-
-    // Listen for all players changes
-    const playersRef = ref(realtimeDb, "players");
-    onChildAdded(playersRef, snapshot => {
-      players[snapshot.key] = snapshot.val();
-      updateLeaderboard();
-    });
-    onChildChanged(playersRef, snapshot => {
-      players[snapshot.key] = snapshot.val();
-      updateLeaderboard();
-    });
-    onChildRemoved(playersRef, snapshot => {
-      delete players[snapshot.key];
-      updateLeaderboard();
-    });
-  }
-
-  // Update leaderboard display
-  function updateLeaderboard() {
-    board.innerHTML = "";
-    Object.entries(players).forEach(([id, p]) => {
-      const li = document.createElement("li");
-      li.textContent = p.username + (id === player?.id ? " (You)" : "");
-      board.appendChild(li);
-    });
-  }
-
-  // Game update loop
-  function update() {
-    if (!player) return;
-
-    // Movement speed
-    const speed = 15;
-
-    if (keysPressed.ArrowUp || keysPressed.KeyW) player.y -= speed;
-    if (keysPressed.ArrowDown || keysPressed.KeyS) player.y += speed;
-    if (keysPressed.ArrowLeft || keysPressed.KeyA) player.x -= speed;
-    if (keysPressed.ArrowRight || keysPressed.KeyD) player.x += speed;
-
-    // Update player position in RealtimeDB
-    if (playerRef) {
-      set(playerRef, {
-        username: player.username,
-        x: player.x,
-        y: player.y,
-        color: player.color,
-        chat: player.chat
-      });
-    }
-
-    draw();
-    requestAnimationFrame(update);
-  }
-
-function draw() {
-  if (!player) return;
-
-  const camX = player.x - canvas.width / 2;
-  const camY = player.y - canvas.height / 2;
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw camera viewport rectangle for debug (in screen space)
-  ctx.strokeStyle = 'red';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(0, 0, canvas.width, canvas.height);
-
-  // Move camera
-  ctx.translate(-camX, -camY);
-
-    // Draw items
-  for (const item of items) {
-    switch (item.type) {
-      case "block":
-        ctx.fillStyle = item.color;
-        ctx.fillRect(item.x, item.y, item.width, item.height);
-        break;
-
-      case "text":
-        ctx.fillStyle = item.color;
-        ctx.font = "24px Comic Sans MS";
-        ctx.fillText(item.text, item.x, item.y);
-        break;
-
-      case "circle":
-        ctx.fillStyle = item.color;
-        ctx.beginPath();
-        ctx.arc(item.x, item.y, item.width / 2, 0, Math.PI * 2);
-        ctx.fill();
-        break;
-
-      // Add more item types here...
-      default:
-        console.warn("Unknown item type:", item.type);
-    }
-  }
-
-
-
-
-
-
   // Draw players
   for (const id in players) {
     const p = players[id];
     if (!p) continue;
 
-    // Player box
     ctx.fillStyle = p.color || "#000";
     ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
 
-    // Username
     ctx.fillStyle = "black";
     ctx.font = "20px Comic Sans MS";
     ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
 
-    // Chat bubble
     if (p.chat && p.chat.trim() !== "") {
       ctx.fillStyle = "white";
       ctx.strokeStyle = "black";
@@ -491,112 +304,134 @@ function draw() {
   }
 }
 
+async function setupPlayer(uid, username) {
+  player = {
+    id: uid,
+    username,
+    x: 100,
+    y: 100,
+    color: "#008800",
+    chat: ""
+  };
 
-  // Keyboard input handlers
-  window.addEventListener("keydown", e => {
-    if (e.target === chatInput) return; // Don't block keys while chatting
+  playerRef = ref(realtimeDb, "players/" + uid);
 
-    keysPressed[e.code] = true;
-
-    // Open chat on Enter
-    if (e.code === "Enter") {
-      toggleChat(true);
-      e.preventDefault();
-    }
+  await set(playerRef, {
+    username: player.username,
+    x: player.x,
+    y: player.y,
+    color: player.color,
+    chat: ""
   });
-  window.addEventListener("keyup", e => {
-    keysPressed[e.code] = false;
-  });
 
-  // Toggle chat input display and focus
-  function toggleChat(show) {
-    chatVisible = show !== undefined ? show : !chatVisible;
-    chatInput.style.display = chatVisible ? "block" : "none";
-    if (chatVisible) {
-      chatInput.focus();
-    } else {
-      chatInput.blur();
-      if (player) player.chat = "";
-    }
+  onDisconnect(playerRef).remove();
+
+  const playersRef = ref(realtimeDb, "players");
+  onChildAdded(playersRef, snapshot => {
+    players[snapshot.key] = snapshot.val();
+    updateLeaderboard();
+  });
+  onChildChanged(playersRef, snapshot => {
+    players[snapshot.key] = snapshot.val();
+    updateLeaderboard();
+  });
+  onChildRemoved(playersRef, snapshot => {
+    delete players[snapshot.key];
+    updateLeaderboard();
+  });
+}
+
+function updateLeaderboard() {
+  board.innerHTML = "";
+  Object.entries(players).forEach(([id, p]) => {
+    const li = document.createElement("li");
+    li.textContent = p.username + (id === player?.id ? " (You)" : "");
+    board.appendChild(li);
+  });
+}
+
+function update() {
+  if (!player) return;
+
+  const speed = 15;
+  if (keysPressed.ArrowUp || keysPressed.KeyW) player.y -= speed;
+  if (keysPressed.ArrowDown || keysPressed.KeyS) player.y += speed;
+  if (keysPressed.ArrowLeft || keysPressed.KeyA) player.x -= speed;
+  if (keysPressed.ArrowRight || keysPressed.KeyD) player.x += speed;
+
+  if (playerRef) {
+    set(playerRef, {
+      username: player.username,
+      x: player.x,
+      y: player.y,
+      color: player.color,
+      chat: player.chat
+    });
   }
 
-  // Send chat message on Enter key in input
-  chatInput.addEventListener("keydown", e => {
-    if (e.code === "Enter") {
-      if (player && chatInput.value.trim() !== "") {
-        player.chat = chatInput.value.trim();
-        if (playerRef) {
-          set(playerRef, {
-            username: player.username,
-            x: player.x,
-            y: player.y,
-            color: player.color,
-            chat: player.chat
-          });
-        }
-      }
-      toggleChat(false);
-    }
-  });
+  draw();
 
-arrowUp.addEventListener("touchstart", e => {
-  e.preventDefault();
-  keysPressed.ArrowUp = true;
-}, { passive: false });
+  requestAnimationFrame(update);
+}
 
-arrowUp.addEventListener("touchend", e => {
-  e.preventDefault();
-  keysPressed.ArrowUp = false;
-}, { passive: false });
+// Keyboard input handling
+window.addEventListener("keydown", e => {
+  keysPressed[e.code] = true;
 
-arrowDown.addEventListener("touchstart", e => {
-  e.preventDefault();
-  keysPressed.ArrowDown = true;
-}, { passive: false });
+  if (e.code === "Enter" && chatVisible) {
+    player.chat = chatInput.value;
+    chatInput.value = "";
+    chatInput.style.display = "none";
+    chatVisible = false;
+  }
 
-arrowDown.addEventListener("touchend", e => {
-  e.preventDefault();
-  keysPressed.ArrowDown = false;
-}, { passive: false });
+  if (e.code === "Enter" && !chatVisible) {
+    chatInput.style.display = "block";
+    chatInput.focus();
+    chatVisible = true;
+  }
+});
 
-arrowLeft.addEventListener("touchstart", e => {
-  e.preventDefault();
-  keysPressed.ArrowLeft = true;
-}, { passive: false });
+window.addEventListener("keyup", e => {
+  keysPressed[e.code] = false;
+});
 
-arrowLeft.addEventListener("touchend", e => {
-  e.preventDefault();
-  keysPressed.ArrowLeft = false;
-}, { passive: false });
+// Touch controls
+arrowUp.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowUp = true; }, { passive: false });
+arrowUp.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowUp = false; }, { passive: false });
+arrowDown.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowDown = true; }, { passive: false });
+arrowDown.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowDown = false; }, { passive: false });
+arrowLeft.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowLeft = true; }, { passive: false });
+arrowLeft.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowLeft = false; }, { passive: false });
+arrowRight.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowRight = true; }, { passive: false });
+arrowRight.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowRight = false; }, { passive: false });
 
-arrowRight.addEventListener("touchstart", e => {
-  e.preventDefault();
-  keysPressed.ArrowRight = true;
-}, { passive: false });
+// Chat toggle button
+chatButton.addEventListener("click", () => {
+  if (!chatVisible) {
+    chatInput.style.display = "block";
+    chatInput.focus();
+    chatVisible = true;
+  } else {
+    player.chat = chatInput.value;
+    chatInput.value = "";
+    chatInput.style.display = "none";
+    chatVisible = false;
+  }
+});
 
-arrowRight.addEventListener("touchend", e => {
-  e.preventDefault();
-  keysPressed.ArrowRight = false;
-}, { passive: false });
+// Main auth listener and game start
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    await loadBlocks();
+    await setupPlayer(user.uid, user.displayName || user.email || "Player");
+    update();  // Start the game loop
+  } else {
+    console.log("Not logged in");
+    // redirect or show login screen
+  }
+});
 
-
-  chatButton.addEventListener("click", e => {
-    toggleChat();
-  });
-
-  // Auth & start
-  onAuthStateChanged(auth, async user => {
-    if (user) {
-      // Use displayName or fallback
-      const username = user.displayName || user.email || "Player";
-      await setupPlayer(user.uid, username);
-      await loadBlocks();
-      requestAnimationFrame(update);
-    } else {
-      // Not signed in, show alert or redirect (for demo just prompt sign-in)
-      alert("Please sign in to play!");
-    }
-  });
 
 </script>
 
