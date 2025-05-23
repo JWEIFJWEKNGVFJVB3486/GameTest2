@@ -188,13 +188,15 @@ async function loadBlocks() {
     return;
   }
 
-  const data = gameSnap.data();
 
-  if (!data.shapes || !Array.isArray(data.shapes)) {
-    console.error("No shapes array found in game document");
-    items = [];
-    return;
-  }
+  const data = docSnap.data();
+if (!data.items || !Array.isArray(data.items)) {
+  console.error("No items array found in game document");
+  blocks = [];
+  return;
+}
+blocks = data.items.filter(item => item.type === "shape");
+
 
   items = data.shapes.map(shape => ({
     type: shape.type || "block", // default to block if not defined
@@ -208,10 +210,6 @@ async function loadBlocks() {
 
   console.log("Items loaded:", items);
 }
-
-
-
-
 
   // Call this once after auth confirmed
   async function setupPlayer(uid, username) {
