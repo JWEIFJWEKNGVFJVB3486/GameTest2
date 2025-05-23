@@ -313,11 +313,6 @@ function draw() {
   for (const block of blocks) {
     ctx.fillStyle = block.color;
     ctx.fillRect(block.x, block.y, block.width, block.height);
-
-    // Draw block outline to debug position/size
-    ctx.strokeStyle = 'black';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(block.x, block.y, block.width, block.height);
   }
 
 
