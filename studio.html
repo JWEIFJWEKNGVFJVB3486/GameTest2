@@ -5,97 +5,77 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
-      background: #e3e3e3;
+      margin: 20px;
+      background: #fafafa;
       user-select: none;
     }
     #toolbar {
-      background: #c3c3c3;
-      padding: 10px;
-      border-bottom: 1px solid #999;
-    }
-    #toolbar button {
-      margin-right: 10px;
-      font-weight: bold;
+      margin-bottom: 10px;
     }
     #canvas {
       position: relative;
       width: 100%;
-      height: calc(100vh - 50px);
+      height: 600px;
       background: #ddd;
+      border: 1px solid #aaa;
       overflow: hidden;
-      cursor: default;
     }
-    /* Common item styles */
-    .item {
+    .shape, .text, .image {
       position: absolute;
+      border-radius: 4px;
       cursor: move;
       user-select: none;
-      box-sizing: border-box;
+    }
+    .shape {
+      background: #3498db;
+    }
+    .circle {
+      border-radius: 50%;
+    }
+    .text {
+      background: none;
+      color: black;
+      font-size: 20px;
     }
     .resizer {
-      width: 12px;
-      height: 12px;
-      background: #1c5980;
+      width: 15px;
+      height: 15px;
+      background: #2980b9;
       position: absolute;
       right: 0;
       bottom: 0;
       cursor: se-resize;
-      border-radius: 2px;
-      z-index: 10;
+      border-radius: 50%;
     }
-    #configPanel {
-      position: absolute;
+    button {
+      margin-right: 10px;
+    }
+    .config-panel {
+      position: fixed;
       background: white;
-      border: 1px solid #999;
+      border: 1px solid #ccc;
       padding: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      font-size: 14px;
-      display: none;
-      width: 180px;
-      border-radius: 6px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      z-index: 9999;
     }
-    #configPanel label {
+    .config-panel label {
       display: block;
-      margin-top: 8px;
-      font-weight: 600;
-    }
-    #configPanel input[type=number] {
-      width: 100%;
-      box-sizing: border-box;
-      margin-top: 3px;
+      margin-bottom: 5px;
     }
   </style>
 </head>
 <body>
 
 <div id="toolbar">
-  <button data-type="square">Add Square</button>
-  <button data-type="circle">Add Circle</button>
-  <button data-type="text">Add Text</button>
+  <button id="addSquareBtn">Add Square</button>
+  <button id="addCircleBtn">Add Circle</button>
+  <button id="addTextBtn">Add Text</button>
   <button id="saveBtn">Save</button>
   <button id="backBtn">Back to Create Game</button>
 </div>
 
 <div id="canvas"></div>
-<input type="color" id="colorPicker" />
-<input type="text" id="textInput" style="position:absolute; display:none; z-index:1000;" />
-
-<!-- Configuration Panel -->
-<div id="configPanel">
-  <label for="borderRadiusInput">Round Corners (px):</label>
-  <input type="number" id="borderRadiusInput" min="0" max="100" step="1" />
-
-  <label for="zIndexInput">Z-Index:</label>
-  <input type="number" id="zIndexInput" step="1" />
-
-  <div id="fontSizeContainer" style="display:none;">
-    <label for="fontSizeInput">Font Size (px):</label>
-    <input type="number" id="fontSizeInput" min="6" max="72" step="1" />
-  </div>
-</div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
   import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -115,366 +95,214 @@
   const db = getFirestore(app);
 
   const canvas = document.getElementById("canvas");
+  const addSquareBtn = document.getElementById("addSquareBtn");
+  const addCircleBtn = document.getElementById("addCircleBtn");
+  const addTextBtn = document.getElementById("addTextBtn");
   const saveBtn = document.getElementById("saveBtn");
   const backBtn = document.getElementById("backBtn");
-  const colorPicker = document.getElementById("colorPicker");
-  const textInput = document.getElementById("textInput");
-
-  const configPanel = document.getElementById("configPanel");
-  const borderRadiusInput = document.getElementById("borderRadiusInput");
-  const zIndexInput = document.getElementById("zIndexInput");
-  const fontSizeContainer = document.getElementById("fontSizeContainer");
-  const fontSizeInput = document.getElementById("fontSizeInput");
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
-
   let unsavedChanges = false;
-  let selectedItem = null;
 
-  document.getElementById("toolbar").addEventListener("click", e => {
-    if (e.target.tagName === "BUTTON" && e.target.dataset.type) {
-      const type = e.target.dataset.type;
-      addItem(type);
-    }
+  let selectedElement = null;
+  let configPanel = null;
+
+  addSquareBtn.addEventListener("click", () => {
+    createShape(50, 50, 100, 100);
+    unsavedChanges = true;
+  });
+
+  addCircleBtn.addEventListener("click", () => {
+    createShape(100, 100, 100, 100, "#e74c3c", true);
+    unsavedChanges = true;
+  });
+
+  addTextBtn.addEventListener("click", () => {
+    createText(150, 150, "New Text");
+    unsavedChanges = true;
   });
 
   saveBtn.addEventListener("click", async () => {
-    const items = Array.from(document.querySelectorAll(".item")).map(el => {
-      const type = el.dataset.type;
-      const base = {
-        type,
+    const data = [];
+    document.querySelectorAll(".shape, .text, .image").forEach(el => {
+      const item = {
+        type: el.classList.contains("text") ? "text" : el.classList.contains("image") ? "image" : "shape",
         x: parseInt(el.style.left),
         y: parseInt(el.style.top),
         width: parseInt(el.style.width),
         height: parseInt(el.style.height),
-        zIndex: el.style.zIndex || "auto",
+        zIndex: parseInt(el.style.zIndex || 0),
+        borderRadius: el.style.borderRadius || "0px",
+        color: el.classList.contains("text") ? el.style.color : el.style.backgroundColor,
+        content: el.classList.contains("text") ? el.textContent : el.getAttribute("src") || "",
+        circle: el.classList.contains("circle") || false
       };
-
-      if (type === "text") {
-        base.text = el.textContent;
-        base.color = el.style.color;
-        base.fontSize = el.style.fontSize;
-        base.borderRadius = el.style.borderRadius || "0";
-      } else {
-        base.color = el.style.backgroundColor;
-        base.borderRadius = el.style.borderRadius || "0";
-      }
-      return base;
+      data.push(item);
     });
-
-    const ref = doc(db, "games", gameId);
-    await updateDoc(ref, { items });
+    await updateDoc(doc(db, "games", gameId), { items: data });
     unsavedChanges = false;
     alert("Game saved!");
   });
 
   backBtn.addEventListener("click", () => {
-    if (unsavedChanges && !confirm("You have unsaved changes. Leave anyway?")) return;
+    if (unsavedChanges && !confirm("You have unsaved changes. Are you sure you want to leave?")) return;
     window.location.href = "create-game.html";
   });
 
-  function addItem(type, x = 50, y = 50, width = 100, height = 100, props = {}) {
-    let el;
+  function createShape(x, y, width, height, color = "#3498db", isCircle = false) {
+    const shape = document.createElement("div");
+    shape.className = "shape";
+    if (isCircle) shape.classList.add("circle");
+    Object.assign(shape.style, {
+      left: `${x}px`,
+      top: `${y}px`,
+      width: `${width}px`,
+      height: `${height}px`,
+      backgroundColor: color,
+    });
+    makeInteractive(shape);
+    canvas.appendChild(shape);
+  }
 
-    if (type === "text") {
-      el = document.createElement("div");
-      el.textContent = props.text || "Text here";
-      el.style.color = props.color || "#000";
-      el.style.fontSize = props.fontSize || "16px";
-      el.style.lineHeight = "1.2";
-      el.style.whiteSpace = "pre-wrap";
-      el.style.padding = "5px";
-      el.style.background = "transparent";
-      el.style.border = "1px dashed #888";
-      el.style.userSelect = "text";
-      el.style.cursor = "text";
-      el.style.borderRadius = props.borderRadius || "2px";
-    } else {
-      el = document.createElement("div");
-      el.style.backgroundColor = props.color || "#3498db";
-      el.style.borderRadius = props.borderRadius !== undefined ? props.borderRadius : (type === "circle" ? "50%" : "2px");
-    }
-
-    el.classList.add("item");
-    el.dataset.type = type;
-
-    el.style.left = x + "px";
-    el.style.top = y + "px";
-    el.style.width = width + "px";
-    el.style.height = height + "px";
-    el.style.position = "absolute";
-    el.style.zIndex = props.zIndex || "auto";
-
-    if (type !== "text") {
-      makeDraggable(el);
-      addResizer(el);
-      el.addEventListener("click", e => {
-        e.stopPropagation();
-        selectItem(el);
-      });
-    } else {
-      el.addEventListener("dblclick", e => {
-        e.stopPropagation();
-        selectedItem = el;
-        textInput.value = el.textContent;
-        const rect = el.getBoundingClientRect();
-        textInput.style.left = rect.left + "px";
-        textInput.style.top = rect.top + "px";
-        textInput.style.width = rect.width + "px";
-        textInput.style.height = rect.height + "px";
-        textInput.style.fontSize = window.getComputedStyle(el).fontSize;
-        textInput.style.display = "block";
-        colorPicker.style.display = "none";
-      });
-      makeDraggable(el);
-      addResizer(el);
-      el.addEventListener("click", e => {
-        e.stopPropagation();
-        selectItem(el);
-      });
-    }
-
+  function createText(x, y, text = "Text") {
+    const el = document.createElement("div");
+    el.className = "text";
+    el.contentEditable = true;
+    el.innerText = text;
+    Object.assign(el.style, {
+      left: `${x}px`,
+      top: `${y}px`,
+      width: `100px`,
+      height: `30px`
+    });
+    makeInteractive(el);
     canvas.appendChild(el);
-    unsavedChanges = true;
   }
 
-  function selectItem(el) {
-    selectedItem = el;
-
-    // Show color picker accordingly
-    colorPicker.style.display = "block";
-    const rect = el.getBoundingClientRect();
-    colorPicker.style.left = rect.right + 5 + "px";
-    colorPicker.style.top = rect.top + "px";
-    if (el.dataset.type === "text") {
-      colorPicker.value = rgbToHex(el.style.color);
-      fontSizeContainer.style.display = "block";
-      fontSizeInput.value = parseInt(window.getComputedStyle(el).fontSize, 10);
-    } else {
-      colorPicker.value = rgbToHex(el.style.backgroundColor);
-      fontSizeContainer.style.display = "none";
-    }
-
-    // Show config panel near the item
-    configPanel.style.display = "block";
-    // Position to the right below the item but keep inside viewport
-    let panelX = rect.right + 10;
-    let panelY = rect.top;
-    if (panelX + configPanel.offsetWidth > window.innerWidth) {
-      panelX = rect.left - configPanel.offsetWidth - 10;
-    }
-    if (panelY + configPanel.offsetHeight > window.innerHeight) {
-      panelY = window.innerHeight - configPanel.offsetHeight - 10;
-    }
-    configPanel.style.left = panelX + "px";
-    configPanel.style.top = panelY + "px";
-
-    // Fill inputs with current values
-    let radiusPx = parseInt(el.style.borderRadius) || 0;
-    // For circle shape border-radius is usually "50%", parseInt = 50 but treat as px here
-    if (el.dataset.type === "circle" && el.style.borderRadius.endsWith("%")) {
-      radiusPx = 50;
-    }
-    borderRadiusInput.value = radiusPx;
-    zIndexInput.value = parseInt(el.style.zIndex) || 0;
-  }
-
-  // Update on config panel changes
-  borderRadiusInput.addEventListener("input", () => {
-    if (!selectedItem) return;
-    let val = borderRadiusInput.value;
-    if (selectedItem.dataset.type === "circle") {
-      // For circles keep border-radius 50% for perfect circle but allow lowering it
-      // We'll allow px value (so it visually changes) but it's common to keep 50% for circle
-      selectedItem.style.borderRadius = val + "px";
-    } else {
-      selectedItem.style.borderRadius = val + "px";
-    }
-    unsavedChanges = true;
-  });
-
-  zIndexInput.addEventListener("input", () => {
-    if (!selectedItem) return;
-    selectedItem.style.zIndex = zIndexInput.value;
-    unsavedChanges = true;
-  });
-
-  fontSizeInput.addEventListener("input", () => {
-    if (!selectedItem || selectedItem.dataset.type !== "text") return;
-    selectedItem.style.fontSize = fontSizeInput.value + "px";
-    unsavedChanges = true;
-  });
-
-  // Text editing inputs
-  textInput.addEventListener("blur", () => {
-    if (selectedItem && selectedItem.dataset.type === "text") {
-      selectedItem.textContent = textInput.value;
-      unsavedChanges = true;
-    }
-    textInput.style.display = "none";
-  });
-  textInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      textInput.blur();
-    }
-  });
-
- colorPicker.addEventListener("input", e => {
-  if (!selectedItem) return;
-  const isText = selectedItem.classList.contains("text");
-  if (isText) {
-    selectedItem.style.color = e.target.value;
-  } else {
-    selectedItem.style.backgroundColor = e.target.value;
-  }
-  unsavedChanges = true;
-});
-
-
-  function makeDraggable(el) {
-    let dragging = false, startX, startY, origX, origY;
-
-    el.addEventListener("mousedown", e => {
-      if (e.target.classList.contains("resizer")) return;
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      origX = parseInt(el.style.left);
-      origY = parseInt(el.style.top);
-      document.body.style.userSelect = "none";
-    });
-
-    window.addEventListener("mousemove", e => {
-      if (!dragging) return;
-      let dx = e.clientX - startX;
-      let dy = e.clientY - startY;
-      el.style.left = origX + dx + "px";
-      el.style.top = origY + dy + "px";
-      unsavedChanges = true;
-
-      // Move config panel too if this is selected item
-      if (selectedItem === el) {
-        const rect = el.getBoundingClientRect();
-        let panelX = rect.right + 10;
-        let panelY = rect.top;
-        if (panelX + configPanel.offsetWidth > window.innerWidth) {
-          panelX = rect.left - configPanel.offsetWidth - 10;
-        }
-        if (panelY + configPanel.offsetHeight > window.innerHeight) {
-          panelY = window.innerHeight - configPanel.offsetHeight - 10;
-        }
-        configPanel.style.left = panelX + "px";
-        configPanel.style.top = panelY + "px";
-      }
-    });
-
-    window.addEventListener("mouseup", () => {
-      dragging = false;
-      document.body.style.userSelect = "";
-    });
-  }
-
-  function addResizer(el) {
+  function makeInteractive(el) {
+    makeDraggable(el);
     const resizer = document.createElement("div");
-    resizer.classList.add("resizer");
+    resizer.className = "resizer";
     el.appendChild(resizer);
-
-    let resizing = false, startX, startY, startWidth, startHeight;
-
-    resizer.addEventListener("mousedown", e => {
+    makeResizable(el, resizer);
+    el.addEventListener("click", (e) => {
       e.stopPropagation();
-      resizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startWidth = parseInt(window.getComputedStyle(el).width, 10);
-      startHeight = parseInt(window.getComputedStyle(el).height, 10);
-      document.body.style.userSelect = "none";
-    });
-
-    window.addEventListener("mousemove", e => {
-      if (!resizing) return;
-      let newWidth = startWidth + (e.clientX - startX);
-      let newHeight = startHeight + (e.clientY - startY);
-
-      // Enforce minimum size
-      newWidth = Math.max(newWidth, 20);
-      newHeight = Math.max(newHeight, 20);
-
-      el.style.width = newWidth + "px";
-      el.style.height = newHeight + "px";
-
-      unsavedChanges = true;
-
-      // Move config panel if item selected
-      if (selectedItem === el) {
-        const rect = el.getBoundingClientRect();
-        let panelX = rect.right + 10;
-        let panelY = rect.top;
-        if (panelX + configPanel.offsetWidth > window.innerWidth) {
-          panelX = rect.left - configPanel.offsetWidth - 10;
-        }
-        if (panelY + configPanel.offsetHeight > window.innerHeight) {
-          panelY = window.innerHeight - configPanel.offsetHeight - 10;
-        }
-        configPanel.style.left = panelX + "px";
-        configPanel.style.top = panelY + "px";
-      }
-    });
-
-    window.addEventListener("mouseup", () => {
-      resizing = false;
-      document.body.style.userSelect = "";
+      showConfigPanel(el);
     });
   }
 
-  // Convert rgb(51, 51, 255) -> #3333ff for color picker compatibility
+  function showConfigPanel(el) {
+    if (configPanel) configPanel.remove();
+    configPanel = document.createElement("div");
+    configPanel.className = "config-panel";
+    configPanel.innerHTML = `
+      <label>Z-Index: <input type="number" id="zIndexInput" value="${el.style.zIndex || 0}" /></label>
+      <label>Border Radius: <input type="number" id="radiusInput" value="${parseInt(el.style.borderRadius) || 0}" /></label>
+      <label>Color: <input type="color" id="colorInput" value="${getItemColor(el)}" /></label>
+      ${el.classList.contains("text") ? '<label>Text: <input type="text" id="textInput" value="' + el.textContent + '" /></label>' : ''}
+      <button id="closeConfig">Close</button>
+    `;
+    document.body.appendChild(configPanel);
+    configPanel.style.left = (parseInt(el.style.left) + parseInt(el.style.width) + 20) + "px";
+    configPanel.style.top = el.style.top;
+
+    configPanel.querySelector("#zIndexInput").addEventListener("input", (e) => {
+      el.style.zIndex = e.target.value;
+      unsavedChanges = true;
+    });
+    configPanel.querySelector("#radiusInput").addEventListener("input", (e) => {
+      el.style.borderRadius = e.target.value + "px";
+      unsavedChanges = true;
+    });
+    configPanel.querySelector("#colorInput").addEventListener("input", (e) => {
+      if (el.classList.contains("text")) el.style.color = e.target.value;
+      else el.style.backgroundColor = e.target.value;
+      unsavedChanges = true;
+    });
+    if (el.classList.contains("text")) {
+      configPanel.querySelector("#textInput").addEventListener("input", (e) => {
+        el.textContent = e.target.value;
+        unsavedChanges = true;
+      });
+    }
+    configPanel.querySelector("#closeConfig").addEventListener("click", () => {
+      configPanel.remove();
+    });
+  }
+
+  function getItemColor(el) {
+    if (el.classList.contains("text")) {
+      return rgbToHex(getComputedStyle(el).color);
+    } else {
+      return rgbToHex(getComputedStyle(el).backgroundColor);
+    }
+  }
+
   function rgbToHex(rgb) {
-    if (!rgb) return "#000000";
-    const result = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i.exec(rgb);
-    return result ? "#" + [1, 2, 3].map(i => {
-      const hex = parseInt(result[i]).toString(16);
+    const result = rgb.match(/\d+/g);
+    return result ? "#" + result.slice(0, 3).map(x => {
+      const hex = parseInt(x).toString(16);
       return hex.length === 1 ? "0" + hex : hex;
     }).join("") : "#000000";
   }
 
-  // Load existing game items
-  async function loadGame() {
-    if (!gameId) {
-      alert("No gameId provided");
-      return;
-    }
-    const ref = doc(db, "games", gameId);
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      alert("Game not found");
-      return;
-    }
-    const data = snap.data();
-    if (!data.items) return;
-    for (const item of data.items) {
-      addItem(item.type, item.x, item.y, item.width, item.height, item);
-    }
+  function makeDraggable(el) {
+    let startX, startY, origX, origY;
+    el.addEventListener("mousedown", (e) => {
+      if (e.target.classList.contains("resizer")) return;
+      e.preventDefault();
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = parseInt(el.style.left);
+      origY = parseInt(el.style.top);
+      function move(e) {
+        el.style.left = (origX + e.clientX - startX) + "px";
+        el.style.top = (origY + e.clientY - startY) + "px";
+        unsavedChanges = true;
+      }
+      function stop() {
+        window.removeEventListener("mousemove", move);
+        window.removeEventListener("mouseup", stop);
+      }
+      window.addEventListener("mousemove", move);
+      window.addEventListener("mouseup", stop);
+    });
   }
 
-  // Deselect items on clicking outside
-  canvas.addEventListener("click", () => {
-    selectedItem = null;
-    colorPicker.style.display = "none";
-    textInput.style.display = "none";
-    configPanel.style.display = "none";
-  });
+  function makeResizable(el, resizer) {
+    let startX, startY, startWidth, startHeight;
+    resizer.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = parseInt(el.style.width);
+      startHeight = parseInt(el.style.height);
+      function resize(e) {
+        el.style.width = (startWidth + e.clientX - startX) + "px";
+        el.style.height = (startHeight + e.clientY - startY) + "px";
+        unsavedChanges = true;
+      }
+      function stop() {
+        window.removeEventListener("mousemove", resize);
+        window.removeEventListener("mouseup", stop);
+      }
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stop);
+    });
+  }
 
-  window.addEventListener("beforeunload", e => {
-    if (unsavedChanges) {
-      e.preventDefault();
-      e.returnValue = "";
+  window.addEventListener("DOMContentLoaded", async () => {
+    if (!gameId) return alert("No game ID found in URL!");
+    const docSnap = await getDoc(doc(db, "games", gameId));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      (data.items || []).forEach(item => {
+        if (item.type === "text") createText(item.x, item.y, item.content);
+        else createShape(item.x, item.y, item.width, item.height, item.color, item.circle);
+      });
     }
   });
-
-  loadGame();
 </script>
-
 </body>
 </html>
