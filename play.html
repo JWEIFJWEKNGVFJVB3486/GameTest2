@@ -171,8 +171,6 @@
   let keysPressed = {};
   let chatVisible = false;
 
-  let blocks = [];
-
 async function loadBlocks() {
   const blocksCol = collection(firestore, "blocks");
   const snapshot = await getDocs(blocksCol);
@@ -180,16 +178,27 @@ async function loadBlocks() {
 
   snapshot.forEach(docSnap => {
     const data = docSnap.data();
-    if (data && typeof data.x === "number" && typeof data.y === "number" && typeof data.size === "number") {
+    console.log("Loaded block:", data);
+
+    // Ensure it has dimensions
+    if (
+      typeof data.x === "number" &&
+      typeof data.y === "number" &&
+      (typeof data.size === "number" || (typeof data.width === "number" && typeof data.height === "number"))
+    ) {
       blocks.push({
         x: data.x,
         y: data.y,
-        size: data.size,
+        width: data.size || data.width,
+        height: data.size || data.height,
         color: "#3498db"
       });
     }
   });
+
+  console.log("All blocks loaded:", blocks);
 }
+
 
 
   // Call this once after auth confirmed
@@ -279,11 +288,12 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(-camX, -camY);
 
-  // Draw blocks
-  for (const block of blocks) {
-    ctx.fillStyle = block.color;
-    ctx.fillRect(block.x, block.y, block.size, block.size);
-  }
+for (const block of blocks) {
+  ctx.fillStyle = block.color;
+  ctx.fillRect(block.x, block.y, block.width, block.height);
+
+}
+
 
   // Draw players
   for (const id in players) {
