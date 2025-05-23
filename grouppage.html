@@ -160,9 +160,9 @@
 
 #chatInput {
   flex: 1;
-  height: 40px;      /* make input taller */
-  font-size: 1em;    /* decent font size */
-  padding: 8px 12px; /* better padding inside input */
+  height: 60px;      /* bigger input height */
+  font-size: 1.1em;
+  padding: 10px 14px;
   box-sizing: border-box;
 }
 
@@ -170,12 +170,15 @@ button {
   background: #4CAF50;
   color: white;
   border: none;
-  padding: 8px 16px; /* reduce padding for slimmer button */
+  padding: 6px 10px; /* smaller button padding */
   font-size: 1em;
   cursor: pointer;
-  height: 40px;      /* same height as input for alignment */
+  height: 40px;      /* keep button height smaller */
   border-radius: 0;
+  width: auto;       /* remove 100% width */
+  min-width: 60px;   /* set a minimum width */
 }
+
 
 
   .message {
