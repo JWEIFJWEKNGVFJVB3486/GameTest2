@@ -122,6 +122,11 @@
 </div>
 
 <script type="module">
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get('gameId');
+  console.log("The gameId is:", gameId);
+  
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, getDocs, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -173,32 +178,35 @@
 let blocks = [];
 
 async function loadBlocks() {
-  const blocksCol = collection(firestore, "blocks");
-  const snapshot = await getDocs(blocksCol);
-  blocks = [];
+  // Replace 'gameIdHere' with your actual game document ID
+  const gameDocRef = doc(firestore, "games", "gameIdHere");
+  const gameSnap = await getDoc(gameDocRef);
 
-  snapshot.forEach(docSnap => {
-    const data = docSnap.data();
-    console.log("Loaded block:", data);
+  if (!gameSnap.exists()) {
+    console.error("Game document not found");
+    blocks = [];
+    return;
+  }
 
-    // Ensure it has dimensions
-    if (
-      typeof data.x === "number" &&
-      typeof data.y === "number" &&
-      (typeof data.size === "number" || (typeof data.width === "number" && typeof data.height === "number"))
-    ) {
-      blocks.push({
-        x: data.x,
-        y: data.y,
-        width: data.size || data.width,
-        height: data.size || data.height,
-        color: "#3498db"
-      });
-    }
-  });
+  const data = gameSnap.data();
 
-  console.log("All blocks loaded:", blocks);
+  if (!data.shapes || !Array.isArray(data.shapes)) {
+    console.error("No shapes array found in game document");
+    blocks = [];
+    return;
+  }
+
+  blocks = data.shapes.map(shape => ({
+    x: shape.x,
+    y: shape.y,
+    width: shape.width,
+    height: shape.height,
+    color: "#3498db" // or customize based on shape if available
+  }));
+
+  console.log("Blocks loaded from game shapes array:", blocks);
 }
+
 
 
 
