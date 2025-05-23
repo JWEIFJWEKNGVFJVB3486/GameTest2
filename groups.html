@@ -50,7 +50,7 @@
       userData = userDocSnap.data();
 
       // Display username and Cube Bucks
-      userInfo.textContent = `${userData.username || "User"} — 💰 ${userData.cubeBucks || 0}`;
+      userInfo.textContent = `${userData.username || "User"} — ${userData.cubeBucks || 0}`;
 
       loadGroups();
     });
