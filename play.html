@@ -270,13 +270,18 @@ function draw() {
   }
 
 
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const uid = user.uid;
+    const username = user.displayName || user.email || "Player";
 
-// Setup player and start game loop AFTER loading items
-async function startGameAfterAuth(uid, username) {
-  await loadBlocks();  // load items first
-  await setupPlayer(uid, username);  // then setup player in RealtimeDB
-  update(); // start update loop (game loop)
-}
+    await loadBlocks();          // Load items from Firestore
+    await setupPlayer(uid, username); // Setup player in RealtimeDB
+    update();                   // Start the game loop
+  } else {
+    console.log("User not logged in");
+    // Optionally redirect to login or show message
+  }
 
   // Draw players (your existing code below)
   for (const id in players) {
