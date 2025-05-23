@@ -172,7 +172,8 @@
   let keysPressed = {};
   let chatVisible = false;
   
-let blocks = [];
+let items = [];
+
 
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId');
@@ -183,7 +184,7 @@ async function loadBlocks() {
 
   if (!gameSnap.exists()) {
     console.error("Game document not found");
-    blocks = [];
+    items = [];
     return;
   }
 
@@ -191,26 +192,23 @@ async function loadBlocks() {
 
   if (!data.shapes || !Array.isArray(data.shapes)) {
     console.error("No shapes array found in game document");
-    blocks = [];
+    items = [];
     return;
   }
 
-  blocks = data.shapes.map(shape => ({
+  items = data.shapes.map(shape => ({
+    type: shape.type || "block", // default to block if not defined
     x: shape.x,
     y: shape.y,
     width: shape.width,
     height: shape.height,
-    color: "#3498db"
+    text: shape.text || "",
+    color: shape.color || "#3498db"
   }));
 
-  console.log("Blocks loaded:", blocks);
+  console.log("Items loaded:", items);
 }
 
-if (gameId) {
-  loadBlocks();
-} else {
-  console.error("No gameId found in URL");
-}
 
 
 
@@ -309,11 +307,34 @@ function draw() {
   // Move camera
   ctx.translate(-camX, -camY);
 
-  // Draw blocks
-  for (const block of blocks) {
-    ctx.fillStyle = block.color;
-    ctx.fillRect(block.x, block.y, block.width, block.height);
+    // Draw items
+  for (const item of items) {
+    switch (item.type) {
+      case "block":
+        ctx.fillStyle = item.color;
+        ctx.fillRect(item.x, item.y, item.width, item.height);
+        break;
+
+      case "text":
+        ctx.fillStyle = item.color;
+        ctx.font = "24px Comic Sans MS";
+        ctx.fillText(item.text, item.x, item.y);
+        break;
+
+      case "circle":
+        ctx.fillStyle = item.color;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      // Add more item types here...
+      default:
+        console.warn("Unknown item type:", item.type);
+    }
   }
+
+
 
 
 
