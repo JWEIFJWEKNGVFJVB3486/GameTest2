@@ -405,15 +405,46 @@ function draw() {
     }
   });
 
-  // Mobile buttons controls for movement & chat toggle
-  arrowUp.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowUp = true; });
-  arrowUp.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowUp = false; });
-  arrowDown.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowDown = true; });
-  arrowDown.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowDown = false; });
-  arrowLeft.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowLeft = true; });
-  arrowLeft.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowLeft = false; });
-  arrowRight.addEventListener("touchstart", e => { e.preventDefault(); keysPressed.ArrowRight = true; });
-  arrowRight.addEventListener("touchend", e => { e.preventDefault(); keysPressed.ArrowRight = false; });
+arrowUp.addEventListener("touchstart", e => {
+  e.preventDefault();
+  keysPressed.ArrowUp = true;
+}, { passive: false });
+
+arrowUp.addEventListener("touchend", e => {
+  e.preventDefault();
+  keysPressed.ArrowUp = false;
+}, { passive: false });
+
+arrowDown.addEventListener("touchstart", e => {
+  e.preventDefault();
+  keysPressed.ArrowDown = true;
+}, { passive: false });
+
+arrowDown.addEventListener("touchend", e => {
+  e.preventDefault();
+  keysPressed.ArrowDown = false;
+}, { passive: false });
+
+arrowLeft.addEventListener("touchstart", e => {
+  e.preventDefault();
+  keysPressed.ArrowLeft = true;
+}, { passive: false });
+
+arrowLeft.addEventListener("touchend", e => {
+  e.preventDefault();
+  keysPressed.ArrowLeft = false;
+}, { passive: false });
+
+arrowRight.addEventListener("touchstart", e => {
+  e.preventDefault();
+  keysPressed.ArrowRight = true;
+}, { passive: false });
+
+arrowRight.addEventListener("touchend", e => {
+  e.preventDefault();
+  keysPressed.ArrowRight = false;
+}, { passive: false });
+
 
   chatButton.addEventListener("click", e => {
     toggleChat();
