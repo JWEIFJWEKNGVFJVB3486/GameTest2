@@ -321,15 +321,17 @@
     }
   });
 
-  colorPicker.addEventListener("input", () => {
-    if (!selectedItem) return;
-    if (selectedItem.dataset.type === "text") {
-      selectedItem.style.color = colorPicker.value;
-    } else {
-      selectedItem.style.backgroundColor = colorPicker.value;
-    }
-    unsavedChanges = true;
-  });
+ colorPicker.addEventListener("input", e => {
+  if (!selectedItem) return;
+  const isText = selectedItem.classList.contains("text");
+  if (isText) {
+    selectedItem.style.color = e.target.value;
+  } else {
+    selectedItem.style.backgroundColor = e.target.value;
+  }
+  unsavedChanges = true;
+});
+
 
   function makeDraggable(el) {
     let dragging = false, startX, startY, origX, origY;
