@@ -122,10 +122,6 @@
 </div>
 
 <script type="module">
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get('gameId');
-  console.log("The gameId is:", gameId);
   
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -175,11 +171,14 @@
   let players = {};
   let keysPressed = {};
   let chatVisible = false;
+  
 let blocks = [];
 
+const urlParams = new URLSearchParams(window.location.search);
+const gameId = urlParams.get('gameId');
+  
 async function loadBlocks() {
-  // Replace 'gameIdHere' with your actual game document ID
-  const gameDocRef = doc(firestore, "games", "gameIdHere");
+  const gameDocRef = doc(firestore, "games", gameId);
   const gameSnap = await getDoc(gameDocRef);
 
   if (!gameSnap.exists()) {
@@ -201,10 +200,16 @@ async function loadBlocks() {
     y: shape.y,
     width: shape.width,
     height: shape.height,
-    color: "#3498db" // or customize based on shape if available
+    color: "#3498db"
   }));
 
-  console.log("Blocks loaded from game shapes array:", blocks);
+  console.log("Blocks loaded:", blocks);
+}
+
+if (gameId) {
+  loadBlocks();
+} else {
+  console.error("No gameId found in URL");
 }
 
 
