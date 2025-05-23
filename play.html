@@ -1,1 +1,90 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Play Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fafafa;
+      user-select: none;
+    }
+    #gameArea {
+      position: relative;
+      width: 100%;
+      height: 600px;
+      background: #ddd;
+      border: 1px solid #aaa;
+      overflow: hidden;
+    }
+    .block {
+      position: absolute;
+      background: #3498db;
+      border-radius: 4px;
+      pointer-events: none; /* no interaction */
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameArea"></div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.firebasestorage.app",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const gameArea = document.getElementById("gameArea");
+  const urlParams = new URLSearchParams(window.location.search);
+  const gameId = urlParams.get("gameId");
+
+  // Load shapes and render as static blocks
+  async function loadBlocks() {
+    if (!gameId) {
+      alert("No game ID found in URL!");
+      return;
+    }
+
+    const gameRef = doc(db, "games", gameId);
+    const gameSnap = await getDoc(gameRef);
+
+    if (gameSnap.exists()) {
+      const data = gameSnap.data();
+      if (Array.isArray(data.shapes)) {
+        data.shapes.forEach(shape => {
+          const block = document.createElement("div");
+          block.classList.add("block");
+          block.style.left = shape.x + "px";
+          block.style.top = shape.y + "px";
+          block.style.width = shape.width + "px";
+          block.style.height = shape.height + "px";
+          gameArea.appendChild(block);
+        });
+      }
+    } else {
+      alert("Game data not found!");
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", loadBlocks);
+</script>
+
+</body>
+</html>
