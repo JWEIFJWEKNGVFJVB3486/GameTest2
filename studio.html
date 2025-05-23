@@ -26,12 +26,12 @@
       overflow: hidden;
       cursor: default;
     }
-    .shape {
+    /* Common item styles */
+    .item {
       position: absolute;
-      background: #3498db;
-      border-radius: 2px;
       cursor: move;
       user-select: none;
+      box-sizing: border-box;
     }
     .resizer {
       width: 12px;
@@ -42,24 +42,23 @@
       bottom: 0;
       cursor: se-resize;
       border-radius: 2px;
-    }
-    #colorPicker {
-      position: absolute;
-      display: none;
-      z-index: 999;
+      z-index: 10;
     }
   </style>
 </head>
 <body>
 
 <div id="toolbar">
-  <button id="addSquareBtn">Add Square</button>
+  <button data-type="square">Add Square</button>
+  <button data-type="circle">Add Circle</button>
+  <button data-type="text">Add Text</button>
   <button id="saveBtn">Save</button>
   <button id="backBtn">Back to Create Game</button>
 </div>
 
 <div id="canvas"></div>
 <input type="color" id="colorPicker" />
+<input type="text" id="textInput" style="position:absolute; display:none; z-index:1000;" />
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -80,90 +79,177 @@
   const db = getFirestore(app);
 
   const canvas = document.getElementById("canvas");
-  const addSquareBtn = document.getElementById("addSquareBtn");
   const saveBtn = document.getElementById("saveBtn");
   const backBtn = document.getElementById("backBtn");
   const colorPicker = document.getElementById("colorPicker");
+  const textInput = document.getElementById("textInput");
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
 
   let unsavedChanges = false;
-  let selectedShape = null;
+  let selectedItem = null;
 
-  addSquareBtn.addEventListener("click", () => {
-    createShape(50, 50, 100, 100);
-    unsavedChanges = true;
+  // Add shape buttons - delegate event listener for multiple buttons
+  document.getElementById("toolbar").addEventListener("click", e => {
+    if (e.target.tagName === "BUTTON" && e.target.dataset.type) {
+      const type = e.target.dataset.type;
+      addItem(type);
+    }
   });
 
   saveBtn.addEventListener("click", async () => {
-    const shapes = Array.from(document.querySelectorAll(".shape")).map(shape => ({
-      x: parseInt(shape.style.left),
-      y: parseInt(shape.style.top),
-      width: parseInt(shape.style.width),
-      height: parseInt(shape.style.height),
-      color: shape.style.backgroundColor
-    }));
+    const items = Array.from(document.querySelectorAll(".item")).map(el => {
+      const type = el.dataset.type;
+      const base = {
+        type,
+        x: parseInt(el.style.left),
+        y: parseInt(el.style.top),
+        width: parseInt(el.style.width),
+        height: parseInt(el.style.height),
+        zIndex: el.style.zIndex || "auto",
+      };
+
+      // Add type-specific properties
+      if (type === "text") {
+        base.text = el.textContent;
+        base.color = el.style.color;
+        base.fontSize = el.style.fontSize;
+      } else {
+        base.color = el.style.backgroundColor;
+        base.borderRadius = el.style.borderRadius || "0";
+      }
+
+      return base;
+    });
 
     const ref = doc(db, "games", gameId);
-    await updateDoc(ref, { shapes });
+    await updateDoc(ref, { items });
     unsavedChanges = false;
     alert("Game saved!");
   });
 
   backBtn.addEventListener("click", () => {
     if (unsavedChanges && !confirm("You have unsaved changes. Leave anyway?")) return;
-    location.href = "create-game.html";
+    window.location.href = "create-game.html";
   });
 
-  function createShape(x, y, width, height, color = "#3498db") {
-    const shape = document.createElement("div");
-    shape.className = "shape";
-    shape.style.left = x + "px";
-    shape.style.top = y + "px";
-    shape.style.width = width + "px";
-    shape.style.height = height + "px";
-    shape.style.backgroundColor = color;
+  // Main function to create an item of a certain type
+  function addItem(type, x = 50, y = 50, width = 100, height = 100, props = {}) {
+    let el;
 
-    makeDraggable(shape);
+    if (type === "text") {
+      el = document.createElement("div");
+      el.textContent = props.text || "Text here";
+      el.style.color = props.color || "#000";
+      el.style.fontSize = props.fontSize || "16px";
+      el.style.lineHeight = "1.2";
+      el.style.whiteSpace = "pre-wrap";
+      el.style.padding = "5px";
+      el.style.background = "transparent";
+      el.style.border = "1px dashed #888";
+      el.style.userSelect = "text";
+      el.style.cursor = "text";
+      el.style.borderRadius = "2px";
+    } else {
+      el = document.createElement("div");
+      el.style.backgroundColor = props.color || "#3498db";
+      el.style.borderRadius = (props.borderRadius !== undefined ? props.borderRadius : (type === "circle" ? "50%" : "2px"));
+    }
 
-    const resizer = document.createElement("div");
-    resizer.className = "resizer";
-    shape.appendChild(resizer);
-    makeResizable(shape, resizer);
+    el.classList.add("item");
+    el.dataset.type = type;
 
-    shape.addEventListener("click", (e) => {
-      e.stopPropagation();
-      selectedShape = shape;
-      const rect = shape.getBoundingClientRect();
-      colorPicker.style.left = rect.right + "px";
-      colorPicker.style.top = rect.top + "px";
-      colorPicker.value = rgbToHex(shape.style.backgroundColor);
-      colorPicker.style.display = "block";
-    });
+    el.style.left = x + "px";
+    el.style.top = y + "px";
+    el.style.width = width + "px";
+    el.style.height = height + "px";
+    el.style.position = "absolute";
 
-    canvas.appendChild(shape);
+    // z-index to keep resizers on top if needed
+    el.style.zIndex = props.zIndex || "auto";
+
+    if (type !== "text") {
+      makeDraggable(el);
+      addResizer(el);
+      // clicking shape shows color picker
+      el.addEventListener("click", e => {
+        e.stopPropagation();
+        selectedItem = el;
+        colorPicker.style.display = "block";
+        const rect = el.getBoundingClientRect();
+        colorPicker.style.left = rect.right + 5 + "px";
+        colorPicker.style.top = rect.top + "px";
+        colorPicker.value = rgbToHex(el.style.backgroundColor);
+        textInput.style.display = "none";
+      });
+    } else {
+      // Text item editable on double click
+      el.addEventListener("dblclick", e => {
+        e.stopPropagation();
+        selectedItem = el;
+        textInput.value = el.textContent;
+        const rect = el.getBoundingClientRect();
+        textInput.style.left = rect.left + "px";
+        textInput.style.top = rect.top + "px";
+        textInput.style.width = rect.width + "px";
+        textInput.style.height = rect.height + "px";
+        textInput.style.fontSize = window.getComputedStyle(el).fontSize;
+        textInput.style.display = "block";
+        colorPicker.style.display = "none";
+        textInput.focus();
+      });
+      makeDraggable(el);
+      addResizer(el);
+    }
+
+    canvas.appendChild(el);
+    unsavedChanges = true;
   }
 
-  function rgbToHex(rgb) {
-    const [r, g, b] = rgb.match(/\d+/g).map(Number);
-    return "#" + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join("");
-  }
+  // Update text on input blur or enter
+  textInput.addEventListener("blur", () => {
+    if (selectedItem && selectedItem.dataset.type === "text") {
+      selectedItem.textContent = textInput.value;
+      unsavedChanges = true;
+    }
+    textInput.style.display = "none";
+  });
+  textInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      textInput.blur();
+    }
+  });
+
+  // Color picker changes background or color depending on type
+  colorPicker.addEventListener("input", () => {
+    if (!selectedItem) return;
+    if (selectedItem.dataset.type === "text") {
+      selectedItem.style.color = colorPicker.value;
+    } else {
+      selectedItem.style.backgroundColor = colorPicker.value;
+    }
+    unsavedChanges = true;
+  });
+
+  // Helpers:
 
   function makeDraggable(el) {
-    let isDragging = false, startX, startY, origX, origY;
+    let dragging = false, startX, startY, origX, origY;
 
-    el.addEventListener("mousedown", (e) => {
+    el.addEventListener("mousedown", e => {
       if (e.target.classList.contains("resizer")) return;
-      isDragging = true;
+      dragging = true;
       startX = e.clientX;
       startY = e.clientY;
       origX = parseInt(el.style.left);
       origY = parseInt(el.style.top);
+      document.body.style.userSelect = "none";
     });
 
-    window.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
+    window.addEventListener("mousemove", e => {
+      if (!dragging) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       el.style.left = origX + dx + "px";
@@ -172,57 +258,93 @@
     });
 
     window.addEventListener("mouseup", () => {
-      isDragging = false;
+      dragging = false;
+      document.body.style.userSelect = "";
     });
   }
 
-  function makeResizable(el, resizer) {
-    let isResizing = false, startX, startY, startW, startH;
+  function addResizer(el) {
+    const resizer = document.createElement("div");
+    resizer.classList.add("resizer");
+    el.appendChild(resizer);
 
-    resizer.addEventListener("mousedown", (e) => {
+    let resizing = false, startX, startY, startWidth, startHeight;
+
+    resizer.addEventListener("mousedown", e => {
       e.stopPropagation();
-      isResizing = true;
+      resizing = true;
       startX = e.clientX;
       startY = e.clientY;
-      startW = parseInt(el.style.width);
-      startH = parseInt(el.style.height);
+      startWidth = parseInt(window.getComputedStyle(el).width, 10);
+      startHeight = parseInt(window.getComputedStyle(el).height, 10);
+      document.body.style.userSelect = "none";
     });
 
-    window.addEventListener("mousemove", (e) => {
-      if (!isResizing) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      el.style.width = startW + dx + "px";
-      el.style.height = startH + dy + "px";
+    window.addEventListener("mousemove", e => {
+      if (!resizing) return;
+      let newWidth = startWidth + (e.clientX - startX);
+      let newHeight = startHeight + (e.clientY - startY);
+
+      // Enforce minimum size
+      newWidth = Math.max(newWidth, 20);
+      newHeight = Math.max(newHeight, 20);
+
+      el.style.width = newWidth + "px";
+      el.style.height = newHeight + "px";
+
       unsavedChanges = true;
     });
 
     window.addEventListener("mouseup", () => {
-      isResizing = false;
+      resizing = false;
+      document.body.style.userSelect = "";
     });
   }
 
-  colorPicker.addEventListener("input", () => {
-    if (selectedShape) {
-      selectedShape.style.backgroundColor = colorPicker.value;
-      unsavedChanges = true;
+  // Convert rgb(51, 51, 255) -> #3333ff for color picker compatibility
+  function rgbToHex(rgb) {
+    if (!rgb) return "#000000";
+    const result = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/i.exec(rgb);
+    return result ? "#" + [1, 2, 3].map(i => {
+      const hex = parseInt(result[i]).toString(16);
+      return hex.length === 1 ? "0" + hex : hex;
+    }).join("") : "#000000";
+  }
+
+  // Load existing game items
+  async function loadGame() {
+    if (!gameId) {
+      alert("No gameId provided");
+      return;
     }
-  });
-
-  // Load saved shapes
-  window.addEventListener("DOMContentLoaded", async () => {
-    if (!gameId) return alert("Missing gameId!");
-
     const ref = doc(db, "games", gameId);
     const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      alert("Game not found");
+      return;
+    }
+    const data = snap.data();
+    if (!data.items) return;
+    for (const item of data.items) {
+      addItem(item.type, item.x, item.y, item.width, item.height, item);
+    }
+  }
 
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.shapes)) {
-        data.shapes.forEach(s => createShape(s.x, s.y, s.width, s.height, s.color));
-      }
+  // Deselect items on clicking outside
+  canvas.addEventListener("click", () => {
+    selectedItem = null;
+    colorPicker.style.display = "none";
+    textInput.style.display = "none";
+  });
+
+  window.addEventListener("beforeunload", e => {
+    if (unsavedChanges) {
+      e.preventDefault();
+      e.returnValue = "";
     }
   });
+
+  loadGame();
 </script>
 
 </body>
