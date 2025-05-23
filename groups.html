@@ -66,9 +66,12 @@
 
           const div = document.createElement("div");
           div.innerHTML = `
-            <strong>${group.name}</strong> (${group.members?.length || 0} members)
-            <button>${isMember ? "Leave" : "Join"}</button>
-          `;
+  <a href="grouppage.html?id=${groupId}" style="text-decoration: none; color: black;">
+    <strong>${group.name}</strong>
+  </a> (${group.members?.length || 0} members)
+  <button>${isMember ? "Leave" : "Join"}</button>
+`;
+
 
           const button = div.querySelector("button");
           button.onclick = () => isMember ? leaveGroup(groupId) : joinGroup(groupId);
