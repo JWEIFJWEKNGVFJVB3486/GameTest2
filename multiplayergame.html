@@ -40,20 +40,66 @@
       display: none;
     }
 
-    /* Mobile controls container */
-    #mobileControls {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      width: 140px;
-      gap: 10px;
-      user-select: none;
-      touch-action: none;
-    }
+#mobileControls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 140px;
+  height: 140px;
+  user-select: none;
+  touch-action: none;
+  /* Remove flex wrapping and gap for diamond layout */
+  display: block; /* or relative positioning container */
+  position: relative; /* needed for absolute arrows */
+}
 
-    #chatButton {
+/* Arrow buttons */
+.arrow-button {
+  position: absolute; /* position absolutely within container */
+  width: 40px;
+  height: 40px;
+  background: #4448;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Place arrows in diamond shape */
+#arrowUp {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#arrowDown {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#arrowLeft {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+#arrowRight {
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+/* Chat button stays outside diamond, positioned separately */
+#chatButton {
+  position: absolute;
+  bottom: 0;
+  right: -50px; /* place it next to the diamond */
   width: 40px;
   height: 40px;
   background: #4448;
@@ -66,51 +112,8 @@
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  order: 5; /* To place it after arrows */
-  margin-left: 10px;
 }
 
-    /* Arrow buttons */
-    .arrow-button {
-      width: 40px;
-      height: 40px;
-      background: #4448;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: white;
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    /* Arrange arrows in a diamond shape */
-    #arrowUp { order: 1; }
-    #arrowLeft { order: 2; }
-    #arrowDown { order: 3; }
-    #arrowRight { order: 4; }
-
-    #mobileControls {
-      justify-content: center;
-    }
-
-    /* Position arrows in diamond */
-    #arrowUp {
-      margin-left: 50px;
-    }
-    #arrowLeft {
-      margin-top: 10px;
-      margin-right: 10px;
-    }
-    #arrowDown {
-      margin-left: 50px;
-    }
-    #arrowRight {
-      margin-top: 10px;
-      margin-left: 10px;
-    }
   </style>
 </head>
 <body>
