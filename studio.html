@@ -5,40 +5,48 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #fafafa;
+      margin: 0;
+      background: #e3e3e3;
       user-select: none;
     }
     #toolbar {
-      margin-bottom: 10px;
+      background: #c3c3c3;
+      padding: 10px;
+      border-bottom: 1px solid #999;
+    }
+    #toolbar button {
+      margin-right: 10px;
+      font-weight: bold;
     }
     #canvas {
       position: relative;
       width: 100%;
-      height: 600px;
+      height: calc(100vh - 50px);
       background: #ddd;
-      border: 1px solid #aaa;
       overflow: hidden;
+      cursor: default;
     }
     .shape {
       position: absolute;
       background: #3498db;
-      border-radius: 4px;
+      border-radius: 2px;
       cursor: move;
       user-select: none;
     }
     .resizer {
-      width: 15px;
-      height: 15px;
-      background: #2980b9;
+      width: 12px;
+      height: 12px;
+      background: #1c5980;
       position: absolute;
       right: 0;
       bottom: 0;
       cursor: se-resize;
-      border-radius: 50%;
+      border-radius: 2px;
     }
-    button {
-      margin-right: 10px;
+    #colorPicker {
+      position: absolute;
+      display: none;
+      z-index: 999;
     }
   </style>
 </head>
@@ -51,22 +59,22 @@
 </div>
 
 <div id="canvas"></div>
-  <input type="color" id="colorPicker" style="display:none; position:absolute;" />
+<input type="color" id="colorPicker" />
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, doc, getDoc, updateDoc, collection, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-  authDomain: "gametest2-ba5fe.firebaseapp.com",
-  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
-  projectId: "gametest2-ba5fe",
-  storageBucket: "gametest2-ba5fe.firebasestorage.app",
-  messagingSenderId: "1063979387642",
-  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-  measurementId: "G-394Y1PYWV7"
-};
-
+  const firebaseConfig = {
+    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+    authDomain: "gametest2-ba5fe.firebaseapp.com",
+    databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+    projectId: "gametest2-ba5fe",
+    storageBucket: "gametest2-ba5fe.appspot.com",
+    messagingSenderId: "1063979387642",
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+    measurementId: "G-394Y1PYWV7"
+  };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -75,13 +83,13 @@ const firebaseConfig = {
   const addSquareBtn = document.getElementById("addSquareBtn");
   const saveBtn = document.getElementById("saveBtn");
   const backBtn = document.getElementById("backBtn");
+  const colorPicker = document.getElementById("colorPicker");
 
   const urlParams = new URLSearchParams(window.location.search);
   const gameId = urlParams.get("gameId");
-  let unsavedChanges = false;
 
-  const colorPicker = document.getElementById("colorPicker");
-let selectedShape = null;
+  let unsavedChanges = false;
+  let selectedShape = null;
 
   addSquareBtn.addEventListener("click", () => {
     createShape(50, 50, 100, 100);
@@ -89,152 +97,129 @@ let selectedShape = null;
   });
 
   saveBtn.addEventListener("click", async () => {
-    const shapeData = [];
-    const shapes = document.querySelectorAll(".shape");
+    const shapes = Array.from(document.querySelectorAll(".shape")).map(shape => ({
+      x: parseInt(shape.style.left),
+      y: parseInt(shape.style.top),
+      width: parseInt(shape.style.width),
+      height: parseInt(shape.style.height),
+      color: shape.style.backgroundColor
+    }));
 
-    shapes.forEach(shape => {
-     shapeData.push({
-  x: parseInt(shape.style.left),
-  y: parseInt(shape.style.top),
-  width: parseInt(shape.style.width),
-  height: parseInt(shape.style.height),
-  color: shape.style.backgroundColor
-});
-
-    });
-
-    const gameRef = doc(db, "games", gameId);
-    await updateDoc(gameRef, { shapes: shapeData });
+    const ref = doc(db, "games", gameId);
+    await updateDoc(ref, { shapes });
     unsavedChanges = false;
     alert("Game saved!");
   });
 
   backBtn.addEventListener("click", () => {
-    if (unsavedChanges) {
-      const confirmLeave = confirm("You have unsaved changes. Are you sure you want to leave?");
-      if (!confirmLeave) return;
-    }
-    window.location.href = "create-game.html";
+    if (unsavedChanges && !confirm("You have unsaved changes. Leave anyway?")) return;
+    location.href = "create-game.html";
   });
 
- function createShape(x, y, width, height, color = "#3498db") {
-  const shape = document.createElement("div");
-  shape.classList.add("shape");
-  shape.style.left = x + "px";
-  shape.style.top = y + "px";
-  shape.style.width = width + "px";
-  shape.style.height = height + "px";
-  shape.style.backgroundColor = color;
+  function createShape(x, y, width, height, color = "#3498db") {
+    const shape = document.createElement("div");
+    shape.className = "shape";
+    shape.style.left = x + "px";
+    shape.style.top = y + "px";
+    shape.style.width = width + "px";
+    shape.style.height = height + "px";
+    shape.style.backgroundColor = color;
 
-  // Make shape draggable
-  makeDraggable(shape);
-  const resizer = document.createElement("div");
-  resizer.classList.add("resizer");
-  shape.appendChild(resizer);
-  makeResizable(shape, resizer);
+    makeDraggable(shape);
 
-  // Click to change color
-  shape.addEventListener("click", (e) => {
-    e.stopPropagation();
-    selectedShape = shape;
-    const rect = shape.getBoundingClientRect();
-    colorPicker.style.left = rect.right + "px";
-    colorPicker.style.top = rect.top + "px";
-    colorPicker.value = rgbToHex(shape.style.backgroundColor);
-    colorPicker.style.display = "block";
-  });
+    const resizer = document.createElement("div");
+    resizer.className = "resizer";
+    shape.appendChild(resizer);
+    makeResizable(shape, resizer);
 
-  canvas.appendChild(shape);
-}
+    shape.addEventListener("click", (e) => {
+      e.stopPropagation();
+      selectedShape = shape;
+      const rect = shape.getBoundingClientRect();
+      colorPicker.style.left = rect.right + "px";
+      colorPicker.style.top = rect.top + "px";
+      colorPicker.value = rgbToHex(shape.style.backgroundColor);
+      colorPicker.style.display = "block";
+    });
+
+    canvas.appendChild(shape);
+  }
 
   function rgbToHex(rgb) {
-  const result = rgb.match(/\d+/g);
-  if (!result) return "#3498db";
-  return "#" + result.slice(0, 3).map(x => {
-    const hex = parseInt(x).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  }).join("");
-}
+    const [r, g, b] = rgb.match(/\d+/g).map(Number);
+    return "#" + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join("");
+  }
 
-  function makeDraggable(element) {
-    let isDragging = false;
-    let startX, startY, origX, origY;
+  function makeDraggable(el) {
+    let isDragging = false, startX, startY, origX, origY;
 
-    element.addEventListener("mousedown", (e) => {
+    el.addEventListener("mousedown", (e) => {
       if (e.target.classList.contains("resizer")) return;
-
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
-      origX = parseInt(element.style.left);
-      origY = parseInt(element.style.top);
-      document.body.style.userSelect = "none";
+      origX = parseInt(el.style.left);
+      origY = parseInt(el.style.top);
     });
 
     window.addEventListener("mousemove", (e) => {
       if (!isDragging) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      element.style.left = (origX + dx) + "px";
-      element.style.top = (origY + dy) + "px";
+      el.style.left = origX + dx + "px";
+      el.style.top = origY + dy + "px";
       unsavedChanges = true;
     });
 
     window.addEventListener("mouseup", () => {
       isDragging = false;
-      document.body.style.userSelect = "";
     });
   }
 
-  function makeResizable(element, resizer) {
-    let isResizing = false;
-    let startX, startY, startWidth, startHeight;
+  function makeResizable(el, resizer) {
+    let isResizing = false, startX, startY, startW, startH;
 
     resizer.addEventListener("mousedown", (e) => {
       e.stopPropagation();
       isResizing = true;
       startX = e.clientX;
       startY = e.clientY;
-      startWidth = parseInt(window.getComputedStyle(element).width, 10);
-      startHeight = parseInt(window.getComputedStyle(element).height, 10);
-      document.body.style.userSelect = "none";
+      startW = parseInt(el.style.width);
+      startH = parseInt(el.style.height);
     });
 
     window.addEventListener("mousemove", (e) => {
       if (!isResizing) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      element.style.width = (startWidth + dx) + "px";
-      element.style.height = (startHeight + dy) + "px";
+      el.style.width = startW + dx + "px";
+      el.style.height = startH + dy + "px";
       unsavedChanges = true;
     });
 
     window.addEventListener("mouseup", () => {
       isResizing = false;
-      document.body.style.userSelect = "";
     });
   }
 
   colorPicker.addEventListener("input", () => {
-  if (selectedShape) {
-    selectedShape.style.backgroundColor = colorPicker.value;
-    unsavedChanges = true;
-  }
-});
+    if (selectedShape) {
+      selectedShape.style.backgroundColor = colorPicker.value;
+      unsavedChanges = true;
+    }
+  });
 
-  // Load existing shapes
+  // Load saved shapes
   window.addEventListener("DOMContentLoaded", async () => {
-    if (!gameId) return alert("No game ID found in URL!");
+    if (!gameId) return alert("Missing gameId!");
 
-    const docRef = doc(db, "games", gameId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+    const ref = doc(db, "games", gameId);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      const data = snap.data();
       if (Array.isArray(data.shapes)) {
-       data.shapes.forEach(shape => {
-  createShape(shape.x, shape.y, shape.width, shape.height, shape.color);
-});
-
+        data.shapes.forEach(s => createShape(s.x, s.y, s.width, s.height, s.color));
       }
     }
   });
