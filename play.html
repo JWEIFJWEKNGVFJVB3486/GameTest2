@@ -202,11 +202,123 @@ async function loadBlocks() {
     return;
   }
 
-  // Filter items with type "shape" or accept all if needed
-  items = data.items.filter(item => item.type === "shape" || item.type === "block" || item.type === "circle" || item.type === "text");
+  // Accept items with type "shape", "block", "circle", or "text"
+  items = data.items.filter(item => 
+    item.type === "shape" || item.type === "block" || item.type === "circle" || item.type === "text"
+  );
 
   console.log("Items loaded:", items);
 }
+
+
+function draw() {
+  if (!player) return;
+
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw camera viewport rectangle for debug (in screen space)
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Move camera
+  ctx.translate(-camX, -camY);
+
+  // Draw items
+  for (const item of items) {
+    switch (item.type) {
+      case "block":
+        ctx.fillStyle = item.color || "#888";
+        ctx.fillRect(item.x, item.y, item.width, item.height);
+        break;
+
+      case "shape":
+        ctx.fillStyle = item.color || "#888";
+        if (item.circle) {
+          // Draw circle using width as diameter
+          ctx.beginPath();
+          ctx.arc(item.x + item.width / 2, item.y + item.height / 2, item.width / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Draw rectangle with optional borderRadius
+          const br = parseInt(item.borderRadius) || 0;
+          if (br > 0) {
+            roundRect(ctx, item.x, item.y, item.width, item.height, br);
+            ctx.fill();
+          } else {
+            ctx.fillRect(item.x, item.y, item.width, item.height);
+          }
+        }
+        break;
+
+      case "text":
+        ctx.fillStyle = item.color || "black";
+        ctx.font = "24px Comic Sans MS";
+        ctx.fillText(item.content || item.text || "", item.x, item.y);
+        break;
+
+      case "circle":
+        ctx.fillStyle = item.color || "#888";
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, item.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+
+      default:
+        console.warn("Unknown item type:", item.type);
+    }
+  }
+
+  // Draw players (your existing code below)
+  for (const id in players) {
+    const p = players[id];
+    if (!p) continue;
+
+    ctx.fillStyle = p.color || "#000";
+    ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
+
+    ctx.fillStyle = "black";
+    ctx.font = "20px Comic Sans MS";
+    ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
+
+    if (p.chat && p.chat.trim() !== "") {
+      ctx.fillStyle = "white";
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      const chatText = p.chat;
+      const textWidth = ctx.measureText(chatText).width;
+      const padding = 10;
+      const x = p.x - textWidth / 2 - padding / 2;
+      const y = p.y - 90;
+
+      ctx.fillRect(x, y - 24, textWidth + padding, 28);
+      ctx.strokeRect(x, y - 24, textWidth + padding, 28);
+
+      ctx.fillStyle = "black";
+      ctx.fillText(chatText, x + padding / 2, y - 6);
+    }
+  }
+}
+
+// Helper function for rounded rectangles
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
 
 
   // Call this once after auth confirmed
