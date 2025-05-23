@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,19 +10,19 @@
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
       getFirestore, doc, getDoc, updateDoc, setDoc, collection,
-      addDoc, onSnapshot, query, where
+      addDoc, onSnapshot, query
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-  authDomain: "gametest2-ba5fe.firebaseapp.com",
-  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
-  projectId: "gametest2-ba5fe",
-  storageBucket: "gametest2-ba5fe.firebasestorage.app",
-  messagingSenderId: "1063979387642",
-  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-  measurementId: "G-394Y1PYWV7"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -36,6 +35,7 @@ const firebaseConfig = {
     const createGroupForm = document.getElementById("createGroupForm");
     const groupNameInput = document.getElementById("groupNameInput");
     const message = document.getElementById("message");
+    const userInfo = document.getElementById("userInfo");
 
     onAuthStateChanged(auth, async user => {
       if (!user) {
@@ -44,9 +44,13 @@ const firebaseConfig = {
       }
 
       currentUserUid = user.uid;
-      const userDoc = await getDoc(doc(db, "users", currentUserUid));
-      if (!userDoc.exists()) return;
-      userData = userDoc.data();
+      const userDocRef = doc(db, "users", currentUserUid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (!userDocSnap.exists()) return;
+      userData = userDocSnap.data();
+
+      // Display username and Cube Bucks
+      userInfo.textContent = `${userData.username || "User"} — 💰 ${userData.cubeBucks || 0}`;
 
       loadGroups();
     });
@@ -75,6 +79,10 @@ const firebaseConfig = {
     }
 
     async function joinGroup(groupId) {
+      const userRef = doc(db, "users", currentUserUid);
+      const userSnap = await getDoc(userRef);
+      userData = userSnap.data(); // Refresh userData
+
       const groupRef = doc(db, "groups", groupId);
       const groupSnap = await getDoc(groupRef);
       if (!groupSnap.exists()) return;
@@ -82,23 +90,21 @@ const firebaseConfig = {
       const group = groupSnap.data();
       const joinedGroups = userData.groups || [];
 
+      if (joinedGroups.includes(groupId)) return;
       if (joinedGroups.length >= 25) {
         showMessage("You can only join up to 25 groups.");
         return;
       }
 
-      if (group.members?.includes(currentUserUid)) return;
-
       await updateDoc(groupRef, {
         members: [...(group.members || []), currentUserUid]
       });
 
-      const userRef = doc(db, "users", currentUserUid);
       await updateDoc(userRef, {
         groups: [...joinedGroups, groupId]
       });
 
-      userData.groups = [...joinedGroups, groupId];
+      userData.groups.push(groupId);
     }
 
     async function leaveGroup(groupId) {
@@ -124,6 +130,9 @@ const firebaseConfig = {
       if (!name) return;
 
       const userRef = doc(db, "users", currentUserUid);
+      const userSnap = await getDoc(userRef);
+      userData = userSnap.data(); // Refresh to avoid stale data
+
       const cubeBucks = userData.cubeBucks || 0;
       const userGroups = userData.groups || [];
 
@@ -152,6 +161,7 @@ const firebaseConfig = {
 
       userData.cubeBucks -= 100;
       userData.groups.push(groupDocRef.id);
+      userInfo.textContent = `${userData.username || "User"} — ${userData.cubeBucks}`;
       groupNameInput.value = "";
       showMessage("Group created!");
     };
@@ -166,16 +176,35 @@ const firebaseConfig = {
     body {
       font-family: sans-serif;
       max-width: 600px;
-      margin: 20px auto;
+      margin: 0 auto;
       background: #f8f8f8;
+      padding-bottom: 40px;
+    }
+
+    header {
+      background-color: #0077cc;
+      color: white;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    main {
       padding: 20px;
-      border-radius: 12px;
     }
 
     input, button {
       padding: 8px;
       margin: 5px;
       border-radius: 6px;
+      border: 1px solid #ccc;
     }
 
     #groupsContainer div {
@@ -188,13 +217,20 @@ const firebaseConfig = {
   </style>
 </head>
 <body>
-  <h2>Groups</h2>
-  <form id="createGroupForm">
-    <input type="text" id="groupNameInput" placeholder="Group Name" maxlength="32" required />
-    <button type="submit">Create Group (100 Cube Bucks)</button>
-  </form>
+  <header>
+    <a href="home.html">Home</a>
+    <div id="userInfo">Loading...</div>
+  </header>
 
-  <p id="message" style="color: red;"></p>
-  <div id="groupsContainer"></div>
+  <main>
+    <h2>Groups</h2>
+    <form id="createGroupForm">
+      <input type="text" id="groupNameInput" placeholder="Group Name" maxlength="32" required />
+      <button type="submit">Create Group (100 Cube Bucks)</button>
+    </form>
+
+    <p id="message" style="color: red;"></p>
+    <div id="groupsContainer"></div>
+  </main>
 </body>
 </html>
