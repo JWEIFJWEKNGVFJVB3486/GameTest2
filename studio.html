@@ -20,6 +20,8 @@
       border: 1px solid #aaa;
       overflow: hidden;
     }
+    <input type="color" id="colorPicker" style="display:none; position:absolute;" />
+
     .shape {
       position: absolute;
       background: #3498db;
@@ -83,6 +85,9 @@ const firebaseConfig = {
   const gameId = urlParams.get("gameId");
   let unsavedChanges = false;
 
+  const colorPicker = document.getElementById("colorPicker");
+let selectedShape = null;
+
   addSquareBtn.addEventListener("click", () => {
     createShape(50, 50, 100, 100);
     unsavedChanges = true;
@@ -93,12 +98,14 @@ const firebaseConfig = {
     const shapes = document.querySelectorAll(".shape");
 
     shapes.forEach(shape => {
-      shapeData.push({
-        x: parseInt(shape.style.left),
-        y: parseInt(shape.style.top),
-        width: parseInt(shape.style.width),
-        height: parseInt(shape.style.height)
-      });
+     shapeData.push({
+  x: parseInt(shape.style.left),
+  y: parseInt(shape.style.top),
+  width: parseInt(shape.style.width),
+  height: parseInt(shape.style.height),
+  color: shape.style.backgroundColor
+});
+
     });
 
     const gameRef = doc(db, "games", gameId);
@@ -115,23 +122,44 @@ const firebaseConfig = {
     window.location.href = "create-game.html";
   });
 
-  function createShape(x, y, width, height) {
-    const shape = document.createElement("div");
-    shape.classList.add("shape");
-    shape.style.left = x + "px";
-    shape.style.top = y + "px";
-    shape.style.width = width + "px";
-    shape.style.height = height + "px";
+ function createShape(x, y, width, height, color = "#3498db") {
+  const shape = document.createElement("div");
+  shape.classList.add("shape");
+  shape.style.left = x + "px";
+  shape.style.top = y + "px";
+  shape.style.width = width + "px";
+  shape.style.height = height + "px";
+  shape.style.backgroundColor = color;
 
-    // Make shape draggable
-    makeDraggable(shape);
-    const resizer = document.createElement("div");
-    resizer.classList.add("resizer");
-    shape.appendChild(resizer);
-    makeResizable(shape, resizer);
+  // Make shape draggable
+  makeDraggable(shape);
+  const resizer = document.createElement("div");
+  resizer.classList.add("resizer");
+  shape.appendChild(resizer);
+  makeResizable(shape, resizer);
 
-    canvas.appendChild(shape);
-  }
+  // Click to change color
+  shape.addEventListener("click", (e) => {
+    e.stopPropagation();
+    selectedShape = shape;
+    const rect = shape.getBoundingClientRect();
+    colorPicker.style.left = rect.right + "px";
+    colorPicker.style.top = rect.top + "px";
+    colorPicker.value = rgbToHex(shape.style.backgroundColor);
+    colorPicker.style.display = "block";
+  });
+
+  canvas.appendChild(shape);
+}
+
+  function rgbToHex(rgb) {
+  const result = rgb.match(/\d+/g);
+  if (!result) return "#3498db";
+  return "#" + result.slice(0, 3).map(x => {
+    const hex = parseInt(x).toString(16);
+    return hex.length === 1 ? "0" + hex : hex;
+  }).join("");
+}
 
   function makeDraggable(element) {
     let isDragging = false;
@@ -192,6 +220,13 @@ const firebaseConfig = {
     });
   }
 
+  colorPicker.addEventListener("input", () => {
+  if (selectedShape) {
+    selectedShape.style.backgroundColor = colorPicker.value;
+    unsavedChanges = true;
+  }
+});
+
   // Load existing shapes
   window.addEventListener("DOMContentLoaded", async () => {
     if (!gameId) return alert("No game ID found in URL!");
@@ -201,9 +236,10 @@ const firebaseConfig = {
     if (docSnap.exists()) {
       const data = docSnap.data();
       if (Array.isArray(data.shapes)) {
-        data.shapes.forEach(shape => {
-          createShape(shape.x, shape.y, shape.width, shape.height);
-        });
+       data.shapes.forEach(shape => {
+  createShape(shape.x, shape.y, shape.width, shape.height, shape.color);
+});
+
       }
     }
   });
