@@ -152,20 +152,31 @@
     border-radius: 0;
   }
 
-  #chatForm {
-    display: flex;
-    gap: 10px;
-  }
+ #chatForm {
+  display: flex;
+  gap: 10px;
+  align-items: center; /* vertically center input and button */
+}
 
-  #chatInput {
-    flex: 1;
-  }
+#chatInput {
+  flex: 1;
+  height: 40px;      /* make input taller */
+  font-size: 1em;    /* decent font size */
+  padding: 8px 12px; /* better padding inside input */
+  box-sizing: border-box;
+}
 
-  button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-  }
+button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px; /* reduce padding for slimmer button */
+  font-size: 1em;
+  cursor: pointer;
+  height: 40px;      /* same height as input for alignment */
+  border-radius: 0;
+}
+
 
   .message {
     padding: 5px 0;
