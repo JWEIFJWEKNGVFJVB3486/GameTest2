@@ -420,17 +420,48 @@ chatButton.addEventListener("click", () => {
   }
 });
 
-// Main auth listener and game start
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    await loadBlocks();
-    await setupPlayer(user.uid, user.displayName || user.email || "Player");
-    update();  // Start the game loop
-  } else {
-    console.log("Not logged in");
-    // redirect or show login screen
-  }
-});
+ onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+      await loadHats();
+
+      const uid = user.uid;
+      const userData = await fetchUserData(uid);
+      const username = userData?.username || "Unnamed";
+
+      player = {
+        username,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: Math.random() * (canvas.height - 100) + 50,
+        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
+        equippedHat: userData?.equippedHat || ""
+      };
+
+      playerRef = ref(realtimeDb, "players/" + uid);
+      set(playerRef, player);
+      onDisconnect(playerRef).remove();
+
+      // Listeners to keep all players updated
+      const playersRef = ref(realtimeDb, "players");
+      onChildAdded(playersRef, snapshot => {
+        const id = snapshot.key;
+        const data = snapshot.val();
+        handlePlayerUpdate(id, data);
+      });
+
+      onChildChanged(playersRef, snapshot => {
+        const id = snapshot.key;
+        const data = snapshot.val();
+        handlePlayerUpdate(id, data);
+      });
+
+      onChildRemoved(playersRef, snapshot => {
+        const id = snapshot.key;
+        delete players[id];
+      });
+
+      loop();
+    });
+
 
 
 </script>
