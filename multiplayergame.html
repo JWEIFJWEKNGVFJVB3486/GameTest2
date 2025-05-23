@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
+
   <style>
     body {
       margin: 0;
@@ -40,19 +42,6 @@
       display: none;
     }
 
-    /* Mobile controls container */
-    #mobileControls {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      width: 140px;
-      gap: 10px;
-      user-select: none;
-      touch-action: none;
-    }
-
     #chatButton {
   width: 40px;
   height: 40px;
@@ -70,47 +59,9 @@
   margin-left: 10px;
 }
 
-    /* Arrow buttons */
-    .arrow-button {
-      width: 40px;
-      height: 40px;
-      background: #4448;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: white;
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
 
-    /* Arrange arrows in a diamond shape */
-    #arrowUp { order: 1; }
-    #arrowLeft { order: 2; }
-    #arrowDown { order: 3; }
-    #arrowRight { order: 4; }
+ 
 
-    #mobileControls {
-      justify-content: center;
-    }
-
-    /* Position arrows in diamond */
-    #arrowUp {
-      margin-left: 50px;
-    }
-    #arrowLeft {
-      margin-top: 10px;
-      margin-right: 10px;
-    }
-    #arrowDown {
-      margin-left: 50px;
-    }
-    #arrowRight {
-      margin-top: 10px;
-      margin-left: 10px;
-    }
   </style>
 </head>
 <body>
@@ -118,14 +69,13 @@
   <div id="leaderboard"><strong>Players</strong><br><ul id="board"></ul></div>
   <input id="chatInput" placeholder="Type your message..." maxlength="50" />
 
-  <!-- Mobile controls -->
-  <div id="mobileControls" aria-label="Movement controls" role="group">
-<div id="chatButton" class="arrow-button" aria-label="Toggle chat">💬</div>
-    <div id="arrowUp" class="arrow-button" aria-label="Move up">▲</div>
-    <div id="arrowLeft" class="arrow-button" aria-label="Move left">◄</div>
-    <div id="arrowDown" class="arrow-button" aria-label="Move down">▼</div>
-    <div id="arrowRight" class="arrow-button" aria-label="Move right">►</div>
-  </div>
+<div id="joystick-container" style="position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; touch-action: none;"></div>
+
+<!-- Keep chat button separately -->
+<div id="chatButton" class="arrow-button" aria-label="Toggle chat" 
+     style="position: absolute; bottom: 20px; left: 180px; width: 40px; height: 40px; font-size: 20px; display: flex; justify-content: center; align-items: center; background: #4448; border-radius: 8px; color: white; cursor: pointer; user-select: none;">
+  💬
+</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -331,43 +281,58 @@ function draw() {
     });
     window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-    // Mobile button input handlers
-    const mobileButtons = {
-      arrowup: document.getElementById("arrowUp"),
-      arrowdown: document.getElementById("arrowDown"),
-      arrowleft: document.getElementById("arrowLeft"),
-      arrowright: document.getElementById("arrowRight"),
-    };
+  // Initialize nipple.js joystick
+const joystickContainer = document.getElementById('joystick-container');
+const joystick = nipplejs.create({
+  zone: joystickContainer,
+  mode: 'static',
+  position: { left: '70px', top: '70px' }, // center inside 140x140 container
+  color: 'gray',
+  size: 120,
+  restOpacity: 0.5
+});
 
-    for (const [keyName, button] of Object.entries(mobileButtons)) {
-      // On touch start or mouse down, set key true
-      button.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        keys[keyName] = true;
-      });
-      button.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        keys[keyName] = true;
-      });
+let joystickDirection = { x: 0, y: 0 };
 
-      // On touch end/cancel or mouse up/out, set key false
-      button.addEventListener("touchend", (e) => {
-        e.preventDefault();
-        keys[keyName] = false;
-      });
-      button.addEventListener("touchcancel", (e) => {
-        e.preventDefault();
-        keys[keyName] = false;
-      });
-      button.addEventListener("mouseup", (e) => {
-        e.preventDefault();
-        keys[keyName] = false;
-      });
-      button.addEventListener("mouseout", (e) => {
-        e.preventDefault();
-        keys[keyName] = false;
-      });
-    }
+joystick.on('move', (evt, data) => {
+  if (data && data.vector) {
+    joystickDirection.x = data.vector.x; // left/right (-1 to 1)
+    joystickDirection.y = data.vector.y; // up/down (-1 to 1)
+  }
+});
+
+joystick.on('end', () => {
+  joystickDirection.x = 0;
+  joystickDirection.y = 0;
+});
+
+// In your game loop, override keys with joystick input:
+
+function loop() {
+  if (!player) return;
+
+  let moved = false;
+
+  // Keyboard input
+  if (keys["w"] || keys["arrowup"]) { player.y -= 2; moved = true; }
+  if (keys["s"] || keys["arrowdown"]) { player.y += 2; moved = true; }
+  if (keys["a"] || keys["arrowleft"]) { player.x -= 2; moved = true; }
+  if (keys["d"] || keys["arrowright"]) { player.x += 2; moved = true; }
+
+  // Add joystick input (priority or combined)
+  if (joystickDirection.y < -0.3) { player.y -= 2; moved = true; }
+  if (joystickDirection.y > 0.3) { player.y += 2; moved = true; }
+  if (joystickDirection.x < -0.3) { player.x -= 2; moved = true; }
+  if (joystickDirection.x > 0.3) { player.x += 2; moved = true; }
+
+  if (moved) {
+    set(playerRef, player);
+  }
+  draw();
+  updateLeaderboard();
+  requestAnimationFrame(loop);
+}
+
 
     const chatButton = document.getElementById("chatButton");
 
