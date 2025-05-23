@@ -179,6 +179,12 @@ const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId');
   
 async function loadBlocks() {
+  if (!gameId) {
+    console.error("No gameId in URL");
+    items = [];
+    return;
+  }
+
   const gameDocRef = doc(firestore, "games", gameId);
   const gameSnap = await getDoc(gameDocRef);
 
@@ -188,28 +194,20 @@ async function loadBlocks() {
     return;
   }
 
+  const data = gameSnap.data();
 
-  const data = docSnap.data();
-if (!data.items || !Array.isArray(data.items)) {
-  console.error("No items array found in game document");
-  blocks = [];
-  return;
-}
-blocks = data.items.filter(item => item.type === "shape");
+  if (!data.items || !Array.isArray(data.items)) {
+    console.error("No items array found in game document");
+    items = [];
+    return;
+  }
 
-
-  items = data.shapes.map(shape => ({
-    type: shape.type || "block", // default to block if not defined
-    x: shape.x,
-    y: shape.y,
-    width: shape.width,
-    height: shape.height,
-    text: shape.text || "",
-    color: shape.color || "#3498db"
-  }));
+  // Filter items with type "shape" or accept all if needed
+  items = data.items.filter(item => item.type === "shape" || item.type === "block" || item.type === "circle" || item.type === "text");
 
   console.log("Items loaded:", items);
 }
+
 
   // Call this once after auth confirmed
   async function setupPlayer(uid, username) {
