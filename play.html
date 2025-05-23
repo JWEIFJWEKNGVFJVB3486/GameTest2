@@ -287,12 +287,27 @@ function draw() {
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw camera viewport rectangle for debug (in screen space)
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Move camera
   ctx.translate(-camX, -camY);
 
-for (const block of blocks) {
-  ctx.fillStyle = block.color;
-  ctx.fillRect(block.x, block.y, block.width, block.height);
+  // Draw blocks
+  for (const block of blocks) {
+    ctx.fillStyle = block.color;
+    ctx.fillRect(block.x, block.y, block.width, block.height);
 
+    // Draw block outline to debug position/size
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(block.x, block.y, block.width, block.height);
+  }
+
+  // Draw players as before...
 }
 
 
