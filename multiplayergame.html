@@ -1,196 +1,450 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>BrickBugs Multiplayer</title>
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
-        background: #222;
-        color: white;
-      }
-      canvas {
-        display: block;
-      }
-      #chatInput {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 80%;
-        padding: 10px;
-        font-size: 16px;
-        z-index: 10;
-        border-radius: 8px;
-        border: none;
-      }
-      #leaderboard {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: rgba(0, 0, 0, 0.6);
-        padding: 10px;
-        border-radius: 8px;
-        z-index: 10;
-      }
-      .chat-bubble {
-        position: absolute;
-        background: white;
-        color: black;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        white-space: nowrap;
-        transform: translate(-50%, -100%);
-        pointer-events: none;
-      }
-      #joystickWrapper {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        width: 120px;
-        height: 120px;
-        z-index: 10;
-      }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
-  </head>
-  <body>
-    <canvas id="gameCanvas" width="1920" height="1080" aria-label="Multiplayer Game Canvas"></canvas>
-    <input type="text" id="chatInput" placeholder="Type to chat..." aria-label="Chat input"/>
-    <div id="leaderboard" role="region" aria-label="Leaderboard"></div>
-    <div id="joystickWrapper"></div>
-    
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
-      import {
-        getDatabase,
-        ref,
-        set,
-        onValue,
-        remove,
-        onDisconnect,
-      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+<html>
+<head>
+  <title>Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: "Comic Sans MS", cursive, sans-serif;
+    }
 
- const firebaseConfig = {
-  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-  authDomain: "gametest2-ba5fe.firebaseapp.com",
-  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
-  projectId: "gametest2-ba5fe",
-  storageBucket: "gametest2-ba5fe.firebasestorage.app",
-  messagingSenderId: "1063979387642",
-  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-  measurementId: "G-394Y1PYWV7"
-};
+    canvas {
+      display: block;
+      background: #eef;
+    }
 
-      const app = initializeApp(firebaseConfig);
-      const db = getDatabase(app);
+    #leaderboard {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
+      font-size: 14px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
 
-      const canvas = document.getElementById("gameCanvas");
-      const ctx = canvas.getContext("2d");
-      let localPlayerId = localStorage.getItem("playerId") || Math.random().toString(36).substring(2, 10);
-      localStorage.setItem("playerId", localPlayerId);
-      let username = localStorage.getItem("username") || "Guest" + Math.floor(Math.random() * 1000);
-      localStorage.setItem("username", username);
+    #chatInput {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: "Comic Sans MS", cursive, sans-serif;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      display: none;
+    }
 
-      const playersRef = ref(db, "players");
-      const playerRef = ref(db, `players/${localPlayerId}`);
+    /* Mobile controls container */
+    #mobileControls {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      width: 140px;
+      gap: 10px;
+      user-select: none;
+      touch-action: none;
+    }
 
-      const player = {
-        x: 100 + Math.random() * 400,
-        y: 100 + Math.random() * 400,
-        color: "#" + Math.floor(Math.random() * 16777215).toString(16),
-        username: username,
-        chat: "",
-        hat: "none",
+    #chatButton {
+  width: 40px;
+  height: 40px;
+  background: #4448;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  order: 5; /* To place it after arrows */
+  margin-left: 10px;
+}
+
+    /* Arrow buttons */
+    .arrow-button {
+      width: 40px;
+      height: 40px;
+      background: #4448;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Arrange arrows in a diamond shape */
+    #arrowUp { order: 1; }
+    #arrowLeft { order: 2; }
+    #arrowDown { order: 3; }
+    #arrowRight { order: 4; }
+
+    #mobileControls {
+      justify-content: center;
+    }
+
+    /* Position arrows in diamond */
+    #arrowUp {
+      margin-left: 50px;
+    }
+    #arrowLeft {
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    #arrowDown {
+      margin-left: 50px;
+    }
+    #arrowRight {
+      margin-top: 10px;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="leaderboard"><strong>Players</strong><br><ul id="board"></ul></div>
+  <input id="chatInput" placeholder="Type your message..." maxlength="50" />
+
+  <!-- Mobile controls -->
+  <div id="mobileControls" aria-label="Movement controls" role="group">
+<div id="chatButton" class="arrow-button" aria-label="Toggle chat">💬</div>
+    <div id="arrowUp" class="arrow-button" aria-label="Move up">▲</div>
+    <div id="arrowLeft" class="arrow-button" aria-label="Move left">◄</div>
+    <div id="arrowDown" class="arrow-button" aria-label="Move down">▼</div>
+    <div id="arrowRight" class="arrow-button" aria-label="Move right">►</div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+      authDomain: "gametest2-ba5fe.firebaseapp.com",
+      projectId: "gametest2-ba5fe",
+      storageBucket: "gametest2-ba5fe.appspot.com",
+      messagingSenderId: "1063979387642",
+      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+      measurementId: "G-394Y1PYWV7",
+      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const firestore = getFirestore(app);
+    const realtimeDb = getDatabase(app);
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const board = document.getElementById("board");
+    const chatInput = document.getElementById("chatInput");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    let player = null;
+    let playerRef = null;
+    let players = {};
+    let hatImages = {};
+    let hatsMap = new Map();
+    let faceImages = {};
+
+    async function loadHats() {
+      const hatsCol = collection(firestore, "hats");
+      const snapshot = await getDocs(hatsCol);
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        hatsMap.set(doc.id, data);
+        if (data.imageUrl) {
+          const img = new Image();
+          img.src = data.imageUrl;
+          hatImages[doc.id] = img;
+        }
+      });
+    }
+
+   async function fetchUserData(uid) {
+  const docRef = doc(firestore, "users", uid);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return null;
+
+  const data = snap.data();
+
+  if (data.equippedHat && !hatImages[uid]) {
+    const hatImg = new Image();
+    hatImg.src = data.equippedHat; // Or lookup from hats collection if needed
+    hatImages[uid] = hatImg;
+  }
+
+  if (data.equippedFace && !faceImages[uid]) {
+    const faceDoc = await getDoc(doc(firestore, "faces", data.equippedFace));
+    if (faceDoc.exists()) {
+      const faceImg = new Image();
+      faceImg.src = faceDoc.data().imageUrl;
+      faceImages[uid] = faceImg;
+    }
+  }
+
+  return data;
+}
+
+    function handlePlayerUpdate(id, data) {
+      players[id] = {
+        ...data,
+        equippedHat: data.equippedHat || ""
       };
 
+      // Async enhancement (don't delay rendering)
+      fetchUserData(id).then(userData => {
+        if (userData && players[id]) {
+          players[id].equippedHat = userData.equippedHat || "";
+        }
+      });
+    }
+
+function draw() {
+  if (!player) return;
+
+  // Center camera on player
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+
+  // Clear canvas and apply camera transform
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any previous transform
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(-camX, -camY); // Move the "camera"
+
+  for (const uid in players) {
+    const p = players[uid];
+    if (!p || typeof p.x !== "number" || typeof p.y !== "number") continue;
+
+    // Draw avatar (80x80)
+    ctx.fillStyle = p.color || "#000";
+    ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
+
+    // Draw username
+    ctx.fillStyle = "black";
+    ctx.font = "20px Comic Sans MS";
+    ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
+
+    // Draw face
+    const faceImg = faceImages[uid];
+    if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
+      ctx.drawImage(faceImg, p.x - 30, p.y - 30, 60, 60);
+    }
+
+    // Draw hat
+    if (p.equippedHat && hatImages[p.equippedHat]) {
+      const img = hatImages[p.equippedHat];
+      if (img.complete && img.naturalWidth !== 0) {
+        ctx.drawImage(img, p.x - 36, p.y - 86, 80, 80);
+      }
+    }
+
+    // Draw chat bubble
+    if (p.chat) {
+      ctx.fillStyle = "white";
+      ctx.strokeStyle = "black";
+      ctx.font = "16px Comic Sans MS";
+      const textWidth = ctx.measureText(p.chat).width;
+      ctx.fillRect(p.x - textWidth / 2 - 8, p.y - 90, textWidth + 16, 24);
+      ctx.strokeRect(p.x - textWidth / 2 - 8, p.y - 90, textWidth + 16, 24);
+      ctx.fillStyle = "black";
+      ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 75);
+    }
+  }
+
+  // Reset transform so UI doesn't get offset
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+
+    function updateLeaderboard() {
+      board.innerHTML = "";
+      for (const uid in players) {
+        const p = players[uid];
+        const li = document.createElement("li");
+        li.textContent = p.username || "?";
+        board.appendChild(li);
+      }
+    }
+
+    function loop() {
+      if (!player) return;
+      let moved = false;
+      if (keys["w"] || keys["arrowup"]) { player.y -= 2; moved = true; }
+      if (keys["s"] || keys["arrowdown"]) { player.y += 2; moved = true; }
+      if (keys["a"] || keys["arrowleft"]) { player.x -= 2; moved = true; }
+      if (keys["d"] || keys["arrowright"]) { player.x += 2; moved = true; }
+      if (moved) {
+        set(playerRef, player);
+      }
+      draw();
+      updateLeaderboard();
+      requestAnimationFrame(loop);
+    }
+
+    const keys = {};
+
+    // Keyboard input
+    window.addEventListener("keydown", e => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === "Enter") {
+        if (chatInput.style.display === "none") {
+          chatInput.style.display = "block";
+          chatInput.focus();
+        } else {
+          const msg = chatInput.value.trim();
+          if (msg) {
+            player.chat = msg;
+            set(playerRef, player);
+            setTimeout(() => {
+              if (player && player.chat === msg) {
+                delete player.chat;
+                set(playerRef, player);
+              }
+            }, 4000);
+          }
+          chatInput.value = "";
+          chatInput.style.display = "none";
+        }
+      }
+    });
+    window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+    // Mobile button input handlers
+    const mobileButtons = {
+      arrowup: document.getElementById("arrowUp"),
+      arrowdown: document.getElementById("arrowDown"),
+      arrowleft: document.getElementById("arrowLeft"),
+      arrowright: document.getElementById("arrowRight"),
+    };
+
+    for (const [keyName, button] of Object.entries(mobileButtons)) {
+      // On touch start or mouse down, set key true
+      button.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        keys[keyName] = true;
+      });
+      button.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        keys[keyName] = true;
+      });
+
+      // On touch end/cancel or mouse up/out, set key false
+      button.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+      button.addEventListener("touchcancel", (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+      button.addEventListener("mouseup", (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+      button.addEventListener("mouseout", (e) => {
+        e.preventDefault();
+        keys[keyName] = false;
+      });
+    }
+
+    const chatButton = document.getElementById("chatButton");
+
+chatButton.addEventListener("touchstart", e => {
+  e.preventDefault();
+  toggleChatInput();
+});
+chatButton.addEventListener("mousedown", e => {
+  e.preventDefault();
+  toggleChatInput();
+});
+
+function toggleChatInput() {
+  if (chatInput.style.display === "none") {
+    chatInput.style.display = "block";
+    chatInput.focus();
+  } else {
+    const msg = chatInput.value.trim();
+    if (msg) {
+      player.chat = msg;
+      set(playerRef, player);
+      setTimeout(() => {
+        if (player && player.chat === msg) {
+          delete player.chat;
+          set(playerRef, player);
+        }
+      }, 4000);
+    }
+    chatInput.value = "";
+    chatInput.style.display = "none";
+  }
+}
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return window.location.href = "index.html";
+      await loadHats();
+
+      const uid = user.uid;
+      const userData = await fetchUserData(uid);
+      const username = userData?.username || "Unnamed";
+
+      player = {
+        username,
+        x: Math.random() * (canvas.width - 100) + 50,
+        y: Math.random() * (canvas.height - 100) + 50,
+        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
+        equippedHat: userData?.equippedHat || ""
+      };
+
+      playerRef = ref(realtimeDb, "players/" + uid);
       set(playerRef, player);
       onDisconnect(playerRef).remove();
 
-      const players = {};
-      onValue(playersRef, (snapshot) => {
+      // Listeners to keep all players updated
+      const playersRef = ref(realtimeDb, "players");
+      onChildAdded(playersRef, snapshot => {
+        const id = snapshot.key;
         const data = snapshot.val();
-        for (const id in data) {
-          players[id] = data[id];
-        }
+        handlePlayerUpdate(id, data);
       });
 
-      const keys = {};
-      document.addEventListener("keydown", (e) => (keys[e.key.toLowerCase()] = true));
-      document.addEventListener("keyup", (e) => (keys[e.key.toLowerCase()] = false));
-
-      const joystickZone = document.getElementById("joystickWrapper");
-      let joystick = nipplejs.create({
-        zone: joystickZone,
-        mode: 'static',
-        position: { left: '60px', bottom: '60px' },
-        color: 'blue',
+      onChildChanged(playersRef, snapshot => {
+        const id = snapshot.key;
+        const data = snapshot.val();
+        handlePlayerUpdate(id, data);
       });
 
-      joystick.on('move', (evt, data) => {
-        if (!data || !data.angle) return;
-        const angle = data.angle.degree;
-        keys["arrowup"] = keys["arrowdown"] = keys["arrowleft"] = keys["arrowright"] = false;
-        if (angle >= 45 && angle < 135) keys["arrowdown"] = true;
-        else if (angle >= 135 && angle < 225) keys["arrowleft"] = true;
-        else if (angle >= 225 && angle < 315) keys["arrowup"] = true;
-        else keys["arrowright"] = true;
+      onChildRemoved(playersRef, snapshot => {
+        const id = snapshot.key;
+        delete players[id];
       });
 
-      joystick.on('end', () => {
-        keys["arrowup"] = keys["arrowdown"] = keys["arrowleft"] = keys["arrowright"] = false;
-      });
+      loop();
+    });
 
-      const chatInput = document.getElementById("chatInput");
-      chatInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && chatInput.value.trim() !== "") {
-          player.chat = chatInput.value.trim();
-          set(playerRef, player);
-          setTimeout(() => {
-            player.chat = "";
-            set(playerRef, player);
-          }, 3000);
-          chatInput.value = "";
-        }
-      });
-
-      function update() {
-        const speed = 2;
-        if (keys["arrowup"] || keys["w"]) player.y -= speed;
-        if (keys["arrowdown"] || keys["s"]) player.y += speed;
-        if (keys["arrowleft"] || keys["a"]) player.x -= speed;
-        if (keys["arrowright"] || keys["d"]) player.x += speed;
-        set(playerRef, player);
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (const id in players) {
-          const p = players[id];
-          ctx.fillStyle = p.color;
-          ctx.fillRect(p.x, p.y, 40, 40);
-          ctx.fillStyle = "white";
-          ctx.font = "14px Arial";
-          ctx.textAlign = "center";
-          ctx.fillText(p.username, p.x + 20, p.y - 10);
-          if (p.chat) {
-            ctx.fillStyle = "white";
-            ctx.fillText(p.chat, p.x + 20, p.y - 25);
-          }
-        }
-      }
-
-      function gameLoop() {
-        update();
-        draw();
-        requestAnimationFrame(gameLoop);
-      }
-
-      gameLoop();
-    </script>
-  </body>
+    
+    
+  </script>
+</body>
 </html>
