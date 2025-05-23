@@ -171,13 +171,13 @@
   let players = {};
   let keysPressed = {};
   let chatVisible = false;
-  
-let items = [];
-
 
 const urlParams = new URLSearchParams(window.location.search);
 const gameId = urlParams.get('gameId');
   
+let items = [];
+
+// Load items from Firestore game document by gameId
 async function loadBlocks() {
   if (!gameId) {
     console.error("No gameId in URL");
@@ -202,15 +202,15 @@ async function loadBlocks() {
     return;
   }
 
-  // Accept items with type "shape", "block", "circle", or "text"
-  items = data.items.filter(item => 
-    item.type === "shape" || item.type === "block" || item.type === "circle" || item.type === "text"
+  // Filter accepted item types just in case
+  items = data.items.filter(item =>
+    ["shape", "block", "circle", "text"].includes(item.type)
   );
 
-  console.log("Items loaded:", items);
+  console.log("Items loaded from Firestore:", items);
 }
 
-
+// Single draw function that draws all loaded items and players
 function draw() {
   if (!player) return;
 
@@ -220,31 +220,29 @@ function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Draw camera viewport rectangle for debug (in screen space)
+  // Optional: draw camera viewport box for debugging
   ctx.strokeStyle = 'red';
   ctx.lineWidth = 3;
   ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
-  // Move camera
   ctx.translate(-camX, -camY);
 
-  // Draw items
+  // Draw loaded items
   for (const item of items) {
+    if (!item) continue;
+    ctx.fillStyle = item.color || "#888";
+
     switch (item.type) {
       case "block":
-        ctx.fillStyle = item.color || "#888";
         ctx.fillRect(item.x, item.y, item.width, item.height);
         break;
 
       case "shape":
-        ctx.fillStyle = item.color || "#888";
         if (item.circle) {
-          // Draw circle using width as diameter
           ctx.beginPath();
           ctx.arc(item.x + item.width / 2, item.y + item.height / 2, item.width / 2, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          // Draw rectangle with optional borderRadius
           const br = parseInt(item.borderRadius) || 0;
           if (br > 0) {
             roundRect(ctx, item.x, item.y, item.width, item.height, br);
@@ -255,23 +253,30 @@ function draw() {
         }
         break;
 
-      case "text":
-        ctx.fillStyle = item.color || "black";
-        ctx.font = "24px Comic Sans MS";
-        ctx.fillText(item.content || item.text || "", item.x, item.y);
-        break;
-
       case "circle":
-        ctx.fillStyle = item.color || "#888";
         ctx.beginPath();
         ctx.arc(item.x, item.y, item.width / 2, 0, Math.PI * 2);
         ctx.fill();
+        break;
+
+      case "text":
+        ctx.font = "24px Comic Sans MS";
+        ctx.fillText(item.text || item.content || "", item.x, item.y);
         break;
 
       default:
         console.warn("Unknown item type:", item.type);
     }
   }
+
+
+
+// Setup player and start game loop AFTER loading items
+async function startGameAfterAuth(uid, username) {
+  await loadBlocks();  // load items first
+  await setupPlayer(uid, username);  // then setup player in RealtimeDB
+  update(); // start update loop (game loop)
+}
 
   // Draw players (your existing code below)
   for (const id in players) {
