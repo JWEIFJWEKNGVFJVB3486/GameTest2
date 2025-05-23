@@ -222,33 +222,45 @@
     }
 
 function draw() {
+  if (!player) return;
+
+  // Center camera on player
+  const camX = player.x - canvas.width / 2;
+  const camY = player.y - canvas.height / 2;
+
+  // Clear canvas and apply camera transform
+  ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset any previous transform
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(-camX, -camY); // Move the "camera"
+
   for (const uid in players) {
     const p = players[uid];
     if (!p || typeof p.x !== "number" || typeof p.y !== "number") continue;
 
-    // Bigger avatar: 80x80 square centered at p.x, p.y
+    // Draw avatar (80x80)
     ctx.fillStyle = p.color || "#000";
     ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
 
+    // Draw username
     ctx.fillStyle = "black";
     ctx.font = "20px Comic Sans MS";
     ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
 
+    // Draw face
     const faceImg = faceImages[uid];
     if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
-      // Draw face bigger, e.g. 60x60 centered
       ctx.drawImage(faceImg, p.x - 30, p.y - 30, 60, 60);
     }
 
+    // Draw hat
     if (p.equippedHat && hatImages[p.equippedHat]) {
       const img = hatImages[p.equippedHat];
       if (img.complete && img.naturalWidth !== 0) {
-        // Draw hat bigger, positioned above the head
         ctx.drawImage(img, p.x - 36, p.y - 86, 80, 80);
       }
     }
 
+    // Draw chat bubble
     if (p.chat) {
       ctx.fillStyle = "white";
       ctx.strokeStyle = "black";
@@ -260,6 +272,9 @@ function draw() {
       ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 75);
     }
   }
+
+  // Reset transform so UI doesn't get offset
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 
