@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Group Page</title>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -9,107 +9,98 @@
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, where, serverTimestamp
+      getFirestore, doc, getDoc, updateDoc, collection, addDoc, onSnapshot, query, orderBy
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
       authDomain: "gametest2-ba5fe.firebaseapp.com",
-      databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
       projectId: "gametest2-ba5fe",
-      storageBucket: "gametest2-ba5fe.appspot.com",
-      messagingSenderId: "1063979387642",
-      appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-      measurementId: "G-394Y1PYWV7"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const params = new URLSearchParams(window.location.search);
-    const groupId = params.get("id");
-
-    const groupTitle = document.getElementById("groupTitle");
-    const groupBio = document.getElementById("groupBio");
-    const editBioForm = document.getElementById("editBioForm");
-    const bioInput = document.getElementById("bioInput");
-    const messageList = document.getElementById("messageList");
-    const messageForm = document.getElementById("messageForm");
-    const messageInput = document.getElementById("messageInput");
-
     let currentUserUid = null;
-    let userData = null;
+    let groupId = new URLSearchParams(window.location.search).get("id");
     let groupData = null;
+    let userIsMember = false;
+    let userIsOwner = false;
+
+    const titleEl = document.getElementById("groupTitle");
+    const bioEl = document.getElementById("groupBio");
+    const bioInput = document.getElementById("bioInput");
+    const updateBioBtn = document.getElementById("updateBioBtn");
+    const chatBox = document.getElementById("chatBox");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
 
     onAuthStateChanged(auth, async user => {
-      if (!user) return (window.location.href = "/login.html");
+      if (!user) return window.location.href = "/login.html";
       currentUserUid = user.uid;
 
-      const userDoc = await getDoc(doc(db, "users", currentUserUid));
-      if (!userDoc.exists()) return;
-      userData = userDoc.data();
-
-      await loadGroup();
-      loadMessages();
-    });
-
-    async function loadGroup() {
       const groupDoc = await getDoc(doc(db, "groups", groupId));
-      if (!groupDoc.exists()) {
-        groupTitle.textContent = "Group not found";
-        return;
-      }
+      if (!groupDoc.exists()) return alert("Group not found");
 
       groupData = groupDoc.data();
-      groupTitle.textContent = groupData.name;
-      groupBio.textContent = groupData.bio || "No bio yet.";
+      userIsMember = groupData.members?.includes(currentUserUid);
+      userIsOwner = groupData.owner === currentUserUid;
 
-      if (groupData.owner === currentUserUid) {
-        editBioForm.style.display = "block";
-        bioInput.value = groupData.bio || "";
-      } else {
-        editBioForm.style.display = "none";
+      const ownerDoc = await getDoc(doc(db, "users", groupData.owner));
+      const ownerName = ownerDoc.exists() ? (ownerDoc.data().username || "Unknown") : "Unknown";
+
+      titleEl.textContent = `${groupData.name} (Leader: ${ownerName})`;
+      bioEl.textContent = groupData.bio || "No bio yet.";
+      bioInput.value = groupData.bio || "";
+
+      if (!userIsOwner) {
+        bioInput.style.display = "none";
+        updateBioBtn.style.display = "none";
       }
-    }
 
-    editBioForm.onsubmit = async e => {
-      e.preventDefault();
+      if (!userIsMember) {
+        chatForm.style.display = "none";
+        chatBox.innerHTML = "<p style='color:red;'>You must be a member to view or send messages.</p>";
+      } else {
+        loadMessages();
+      }
+    });
+
+    updateBioBtn.onclick = async () => {
       const newBio = bioInput.value.trim();
-      if (!newBio) return;
-
-      await updateDoc(doc(db, "groups", groupId), {
-        bio: newBio
-      });
-
-      groupBio.textContent = newBio;
+      await updateDoc(doc(db, "groups", groupId), { bio: newBio });
+      bioEl.textContent = newBio;
     };
 
-    messageForm.onsubmit = async e => {
+    chatForm.onsubmit = async e => {
       e.preventDefault();
-      const text = messageInput.value.trim();
+      const text = chatInput.value.trim();
       if (!text) return;
+
+      const userDoc = await getDoc(doc(db, "users", currentUserUid));
+      const username = userDoc.exists() ? userDoc.data().username || "User" : "User";
 
       await addDoc(collection(db, "groups", groupId, "messages"), {
         text,
-        uid: currentUserUid,
-        username: userData.username,
-        createdAt: serverTimestamp()
+        sender: username,
+        time: Date.now()
       });
 
-      messageInput.value = "";
+      chatInput.value = "";
     };
 
     function loadMessages() {
-      const q = query(collection(db, "groups", groupId, "messages"));
+      const q = query(collection(db, "groups", groupId, "messages"), orderBy("time"));
       onSnapshot(q, snapshot => {
-        messageList.innerHTML = "";
-        snapshot.forEach(doc => {
-          const msg = doc.data();
-          const div = document.createElement("div");
-          div.textContent = `${msg.username}: ${msg.text}`;
-          messageList.appendChild(div);
+        chatBox.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const msg = docSnap.data();
+          const msgEl = document.createElement("div");
+          msgEl.innerHTML = `<strong>${msg.sender}:</strong> ${msg.text}`;
+          chatBox.appendChild(msgEl);
         });
+        chatBox.scrollTop = chatBox.scrollHeight;
       });
     }
   </script>
@@ -117,68 +108,51 @@
   <style>
     body {
       font-family: sans-serif;
-      max-width: 600px;
       margin: 20px auto;
+      max-width: 600px;
       background: #f0f0f0;
       padding: 20px;
-      border-radius: 10px;
+      border-radius: 12px;
     }
-
-    #editBioForm, #messageForm {
-      margin-top: 10px;
-    }
-
-    textarea, input, button {
-      padding: 8px;
-      margin: 5px 0;
+    h2 { margin-bottom: 10px; }
+    textarea {
       width: 100%;
-    }
-
-    #messageList {
-      background: white;
-      padding: 10px;
-      margin-top: 10px;
+      height: 60px;
+      margin-bottom: 10px;
       border-radius: 6px;
-      max-height: 300px;
-      overflow-y: auto;
     }
-
-    #messageList div {
-      margin-bottom: 5px;
+    #chatBox {
+      border: 1px solid #ccc;
+      padding: 10px;
+      background: white;
+      height: 300px;
+      overflow-y: scroll;
+      margin-bottom: 10px;
+      border-radius: 8px;
     }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
+    input[type="text"] {
+      width: 80%;
+      padding: 8px;
     }
-
-    .topbar button {
-      padding: 6px 12px;
+    button {
+      padding: 8px;
+      margin-left: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <button onclick="window.location.href='home.html'">Home</button>
-    <div id="userInfo"></div>
-  </div>
-
   <h2 id="groupTitle">Loading...</h2>
-  <p id="groupBio"></p>
+  <p id="groupBio">Loading bio...</p>
 
-  <form id="editBioForm" style="display: none;">
-    <textarea id="bioInput" rows="3" placeholder="Edit group bio..."></textarea>
-    <button type="submit">Save Bio</button>
-  </form>
+  <textarea id="bioInput" placeholder="Edit bio..."></textarea>
+  <button id="updateBioBtn">Update Bio</button>
 
   <h3>Group Chat</h3>
-  <form id="messageForm">
-    <input id="messageInput" placeholder="Type your message..." required />
+  <div id="chatBox">Loading messages...</div>
+
+  <form id="chatForm">
+    <input type="text" id="chatInput" placeholder="Type a message..." maxlength="100" required />
     <button type="submit">Send</button>
   </form>
-
-  <div id="messageList"></div>
 </body>
 </html>
-
