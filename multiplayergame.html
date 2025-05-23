@@ -207,19 +207,40 @@
   return data;
 }
 
-    function handlePlayerUpdate(id, data) {
-      players[id] = {
-        ...data,
-        equippedHat: data.equippedHat || ""
-      };
+    async function handlePlayerUpdate(id, data) {
+  if (!data) return;
 
-      // Async enhancement (don't delay rendering)
-      fetchUserData(id).then(userData => {
-        if (userData && players[id]) {
-          players[id].equippedHat = userData.equippedHat || "";
-        }
-      });
+  // Detect changes in equippedHat or equippedFace to reload images if needed
+  const oldHat = players[id]?.equippedHat;
+  const oldFace = players[id]?.equippedFace;
+
+  players[id] = {
+    ...data,
+    equippedHat: data.equippedHat || "",
+    equippedFace: data.equippedFace || ""
+  };
+
+  // If hat changed or hat image not loaded yet, load/reload hat image
+  if (players[id].equippedHat && (players[id].equippedHat !== oldHat || !hatImages[players[id].equippedHat])) {
+    if (hatsMap.has(players[id].equippedHat)) {
+      const hatData = hatsMap.get(players[id].equippedHat);
+      const img = new Image();
+      img.src = hatData.imageUrl;
+      hatImages[players[id].equippedHat] = img;
     }
+  }
+
+  // If face changed or face image not loaded yet, load/reload face image
+  if (players[id].equippedFace && (players[id].equippedFace !== oldFace || !faceImages[players[id].equippedFace])) {
+    const faceDoc = await getDoc(doc(firestore, "faces", players[id].equippedFace));
+    if (faceDoc.exists()) {
+      const faceImg = new Image();
+      faceImg.src = faceDoc.data().imageUrl;
+      faceImages[players[id].equippedFace] = faceImg;
+    }
+  }
+}
+
 
 function draw() {
   if (!player) return;
@@ -420,6 +441,25 @@ function toggleChatInput() {
       playerRef = ref(realtimeDb, "players/" + uid);
       set(playerRef, player);
       onDisconnect(playerRef).remove();
+
+      // Listen for changes to your own player data (to update avatar and chat instantly)
+onChildChanged(playerRef, snapshot => {
+  const data = snapshot.val();
+  if (data) {
+    if (data.equippedHat !== undefined && player.equippedHat !== data.equippedHat) {
+      player.equippedHat = data.equippedHat;
+
+      if (hatsMap.has(data.equippedHat) && !hatImages[data.equippedHat]) {
+        const img = new Image();
+        img.src = hatsMap.get(data.equippedHat).imageUrl;
+        hatImages[data.equippedHat] = img;
+      }
+    }
+    if (data.chat !== undefined) {
+      player.chat = data.chat;
+    }
+  }
+});
 
       // Listeners to keep all players updated
       const playersRef = ref(realtimeDb, "players");
