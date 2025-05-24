@@ -4,64 +4,97 @@
   <title>All Games</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
       padding: 20px;
-      background: #eef5ff;
+      background: #d7ffd9;
     }
 
     h1 {
-      color: #333;
+      color: #145214;
     }
 
     .game-item {
-      background: #fff;
+      background: #ffffff;
       padding: 15px;
-      border-radius: 12px;
+      border-radius: 0;
       margin-bottom: 15px;
-      box-shadow: 0 3px 7px rgba(0,0,0,0.15);
+      box-shadow: 0 3px 7px rgba(0, 0, 0, 0.15);
       cursor: pointer;
+      border: 2px solid #14a44d;
     }
 
     .play-btn, .like-btn, .dislike-btn {
-      background: #007bff;
+      background: #14a44d;
       color: white;
       margin-top: 10px;
       padding: 8px 14px;
       border: none;
-      border-radius: 10px;
+      border-radius: 0;
       cursor: pointer;
       font-size: 14px;
+      font-family: 'Comic Sans MS', cursive;
     }
 
-    .like-btn.active, .dislike-btn.active {
-      background-color: #28a745;
+    .like-btn.active {
+      background-color: #1fd655;
     }
 
     .dislike-btn.active {
-      background-color: #dc3545;
+      background-color: #ff4d4d;
     }
 
-    .game-panel {
-      background: #fff;
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      max-width: 700px;
+      background: #ffffff;
+      border: 3px solid #145214;
       padding: 20px;
-      border-radius: 12px;
-      margin-top: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      border-radius: 0;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 999;
     }
 
     .comment-box textarea {
       width: 100%;
       padding: 10px;
-      border-radius: 10px;
-      margin-top: 10px;
       font-size: 14px;
+      margin-top: 10px;
+      font-family: 'Comic Sans MS', cursive;
+      border-radius: 0;
     }
 
     .comment {
-      background: #f4f4f4;
+      background: #e4ffe4;
       padding: 10px;
       margin-top: 10px;
-      border-radius: 10px;
+      border: 2px solid #14a44d;
+      border-radius: 0;
+    }
+
+    .close-btn {
+      float: right;
+      background: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 0;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -69,7 +102,12 @@
 
 <h1>All Games</h1>
 <div id="gamesContainer"></div>
-<div id="gamePanel" class="game-panel" style="display: none;"></div>
+
+<div class="modal-overlay" id="modalOverlay"></div>
+<div id="gamePanel" class="modal">
+  <button class="close-btn" onclick="closePanel()">X</button>
+  <div id="gameContent"></div>
+</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -92,6 +130,8 @@
 
   const gamesContainer = document.getElementById("gamesContainer");
   const gamePanel = document.getElementById("gamePanel");
+  const gameContent = document.getElementById("gameContent");
+  const modalOverlay = document.getElementById("modalOverlay");
 
   function escapeHTML(str) {
     const div = document.createElement("div");
@@ -113,11 +153,16 @@
       div.innerHTML = `<strong>${escapeHTML(data.name || "Unnamed Game")}</strong><br>
         <small>${escapeHTML(data.description || "No description provided.")}</small><br>
         <small>Visits: ${data.visits || 0}</small>`;
-
       div.addEventListener("click", () => openGamePanel(docSnap.id));
       gamesContainer.appendChild(div);
     });
   }
+
+  window.closePanel = function() {
+    gamePanel.style.display = "none";
+    modalOverlay.style.display = "none";
+    gameContent.innerHTML = "";
+  };
 
   async function openGamePanel(gameId) {
     const docRef = doc(db, "games", gameId);
@@ -125,16 +170,16 @@
     if (!docSnap.exists()) return;
 
     await updateDoc(docRef, { visits: increment(1) });
-
     const game = docSnap.data();
+
     gamePanel.style.display = "block";
-    gamePanel.innerHTML = `
+    modalOverlay.style.display = "block";
+    gameContent.innerHTML = `
       <h2>${escapeHTML(game.name)}</h2>
       <p>${escapeHTML(game.description)}</p>
-      <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button>
-      <br><br>
-      <button class="like-btn" id="likeBtn">👍 Like (<span id="likeCount">${game.likes || 0}</span>)</button>
-      <button class="dislike-btn" id="dislikeBtn">👎 Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
+      <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
+      <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
+      <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
       <div class="comment-box">
         <textarea id="commentText" placeholder="Add a comment..."></textarea>
         <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
@@ -146,11 +191,9 @@
     const dislikeBtn = document.getElementById("dislikeBtn");
 
     const userDocRef = currentUser ? doc(db, `games/${gameId}/votes/${currentUser.uid}`) : null;
-
     if (userDocRef) {
       const voteSnap = await getDoc(userDocRef);
       const vote = voteSnap.exists() ? voteSnap.data().vote : null;
-
       if (vote === "like") likeBtn.classList.add("active");
       if (vote === "dislike") dislikeBtn.classList.add("active");
 
