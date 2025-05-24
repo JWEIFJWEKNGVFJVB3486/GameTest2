@@ -19,16 +19,52 @@
       border-radius: 6px;
       margin-bottom: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
     }
 
     .play-btn {
       background: #007bff;
       color: white;
-      margin-top: 10px;
-      padding: 6px 12px;
+      margin-top: 15px;
+      padding: 8px 16px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      width: 100%;
+    }
+
+    .close-btn {
+      background: #ccc;
+      color: black;
+      border: none;
+      margin-top: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      width: 100%;
     }
   </style>
 </head>
@@ -36,6 +72,17 @@
 
 <h1>All Games</h1>
 <div id="gamesContainer"></div>
+
+<!-- Modal -->
+<div id="gameModal" class="modal">
+  <div class="modal-content">
+    <h2 id="modalTitle">Game Title</h2>
+    <p id="modalDescription">Game Description</p>
+    <p><strong>Created by:</strong> <span id="modalCreator">Creator</span></p>
+    <button id="modalPlayBtn" class="play-btn">Play</button>
+    <button class="close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -47,19 +94,37 @@
     projectId: "gametest2-ba5fe",
     storageBucket: "gametest2-ba5fe.appspot.com",
     messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7"
+    appId: "1:1063979387642:web:307e4621ae0394bcb49743"
   };
 
   const app = initializeApp(firebaseConfig);
   const firestore = getFirestore(app);
 
   const gamesContainer = document.getElementById("gamesContainer");
+  const gameModal = document.getElementById("gameModal");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalDescription = document.getElementById("modalDescription");
+  const modalCreator = document.getElementById("modalCreator");
+  const modalPlayBtn = document.getElementById("modalPlayBtn");
 
   function escapeHTML(str) {
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function openModal(game) {
+    modalTitle.innerHTML = escapeHTML(game.name || "Unnamed Game");
+    modalDescription.innerHTML = escapeHTML(game.description || "No description provided.");
+    modalCreator.innerHTML = escapeHTML(game.creator || "Unknown");
+    modalPlayBtn.onclick = () => {
+      window.location.href = `play.html?gameId=${game.id}`;
+    };
+    gameModal.style.display = "block";
+  }
+
+  function closeModal() {
+    gameModal.style.display = "none";
   }
 
   async function loadAllGames() {
@@ -70,19 +135,18 @@
       div.className = "game-item";
       div.innerHTML = `
         <strong>${escapeHTML(data.name || "Unnamed Game")}</strong><br>
-        <small>${escapeHTML(data.description || "No description provided.")}</small><br>
-        <button class="play-btn">Open</button>
+        <small>${escapeHTML(data.description || "No description")}</small>
       `;
-
-      div.querySelector(".play-btn").addEventListener("click", () => {
-        window.location.href = `play.html?gameId=${docSnap.id}`;
+      div.addEventListener("click", () => {
+        openModal({ ...data, id: docSnap.id });
       });
-
       gamesContainer.appendChild(div);
     });
   }
 
   loadAllGames();
+
+  window.closeModal = closeModal;
 </script>
 
 </body>
