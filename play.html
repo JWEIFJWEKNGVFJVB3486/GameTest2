@@ -398,48 +398,42 @@ function draw() {
       }
     }
 
-    function loop() {
-      if (!player) return;
-      let moved = false;
-      if (keys["w"] || keys["arrowup"]) { player.y -= 5; moved = true; }
-      if (keys["s"] || keys["arrowdown"]) { player.y += 5; moved = true; }
-      if (keys["a"] || keys["arrowleft"]) { player.x -= 5; moved = true; }
-      if (keys["d"] || keys["arrowright"]) { player.x += 5; moved = true; }
-      if (moved) {
-        set(playerRef, player);
-      }
-      draw();
-      updateLeaderboard();
-      requestAnimationFrame(loop);
-    }
+   function loop() {
+  if (!player) return;
+  let moved = false;
+
+  if (keys["w"] || keys["arrowup"]) { player.y -= 5; moved = true; }
+  if (keys["s"] || keys["arrowdown"]) { player.y += 5; moved = true; }
+  if (keys["a"] || keys["arrowleft"]) { player.x -= 5; moved = true; }
+  if (keys["d"] || keys["arrowright"]) { player.x += 5; moved = true; }
+
+  if (moved) {
+    // Sync position locally and remotely
+    players[player.username] = player;
+    set(playerRef, player);
+  }
+
+  draw();
+  updateLeaderboard();
+
+  requestAnimationFrame(loop);
+}
 
     const keys = {};
 
-    // Keyboard input
-    window.addEventListener("keydown", e => {
-      keys[e.key.toLowerCase()] = true;
-      if (e.key === "Enter") {
-        if (chatInput.style.display === "none") {
-          chatInput.style.display = "block";
-          chatInput.focus();
-        } else {
-          const msg = chatInput.value.trim();
-          if (msg) {
-            player.chat = msg;
-            set(playerRef, player);
-            setTimeout(() => {
-              if (player && player.chat === msg) {
-                delete player.chat;
-                set(playerRef, player);
-              }
-            }, 4000);
-          }
-          chatInput.value = "";
-          chatInput.style.display = "none";
-        }
-      }
-    });
-    window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+window.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === "Enter") {
+    if (chatInput.style.display === "none") {
+      chatInput.style.display = "block";
+      chatInput.focus();
+    } else {
+      sendChat();
+      chatInput.style.display = "none";
+    }
+  }
+});
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
     // Mobile button input handlers
     const mobileButtons = {
@@ -510,57 +504,78 @@ function toggleChatInput() {
     chatInput.style.display = "none";
   }
 }
+function sendChat() {
+  const msg = chatInput.value.trim();
+  if (!msg || !playerRef) return;
 
-   onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      await loadHats();
-      await loadBlocks();
-      const uid = user.uid;
-      const userData = await fetchUserData(uid);
-      const username = userData?.username || "Unnamed";
+  player.chat = msg;
+  players[player.username] = player;  // Update local players cache
 
-      player = {
-        username,
-        x: Math.random() * (canvas.width - 100) + 50,
-        y: Math.random() * (canvas.height - 100) + 50,
-        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
-        equippedHat: userData?.equippedHat || ""
-      };
+  set(playerRef, player);
 
-   if (!gameId) {
-  console.error("Missing gameId");
-  return;
+  setTimeout(() => {
+    if (player && player.chat === msg) {
+      delete player.chat;
+      players[player.username] = player;
+      set(playerRef, player);
+    }
+  }, 4000);
+
+  chatInput.value = "";
 }
+  onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
 
-playerRef = ref(realtimeDb, `games/${gameId}/players/${uid}`);
-set(playerRef, player);
-onDisconnect(playerRef).remove();
+  await loadHats();
+  await loadBlocks();
 
-// Listeners to keep all players updated
-const playersRef = ref(realtimeDb, `games/${gameId}/players`);
+  const uid = user.uid;
+  const userData = await fetchUserData(uid);
+  const username = userData?.username || "Unnamed";
 
-      onChildAdded(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
+  player = {
+    username,
+    x: Math.random() * (canvas.width - 100) + 50,
+    y: Math.random() * (canvas.height - 100) + 50,
+    color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
+    equippedHat: userData?.equippedHat || "",
+    chat: ""
+  };
 
-      onChildChanged(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
+  if (!gameId) {
+    console.error("Missing gameId");
+    return;
+  }
 
-      onChildRemoved(playersRef, snapshot => {
-        const id = snapshot.key;
-        delete players[id];
-      });
+  playerRef = ref(realtimeDb, `games/${gameId}/players/${uid}`);
 
-      loop();
-    });
+  // Add your player to local players immediately for drawing
+  players[uid] = player;
 
+  await set(playerRef, player);
+  onDisconnect(playerRef).remove();
 
+  const playersRef = ref(realtimeDb, `games/${gameId}/players`);
 
+  onChildAdded(playersRef, snapshot => {
+    const id = snapshot.key;
+    const data = snapshot.val();
+    handlePlayerUpdate(id, data);
+  });
+
+  onChildChanged(playersRef, snapshot => {
+    const id = snapshot.key;
+    const data = snapshot.val();
+    handlePlayerUpdate(id, data);
+  });
+
+  onChildRemoved(playersRef, snapshot => {
+    const id = snapshot.key;
+    delete players[id];
+  });
+
+  loop();
+});
 
 </script>
 
