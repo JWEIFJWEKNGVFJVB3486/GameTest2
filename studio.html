@@ -165,7 +165,7 @@
     canvas.appendChild(shape);
   }
 
- function createText(x, y, text = "Text") {
+function createText(x, y, text = "Text", color = "black") {
   const el = document.createElement("div");
   el.className = "text";
   el.contentEditable = true;
@@ -174,11 +174,12 @@
     left: `${x}px`,
     top: `${y}px`,
     width: `100px`,
-    height: `30px`
+    height: `30px`,
+    color: color // ✅ apply color here
   });
   makeInteractive(el);
   canvas.appendChild(el);
-  return el; // <-- Return element so color can be set
+  return el;
 }
 
   function makeInteractive(el) {
@@ -293,21 +294,21 @@
     });
   }
 
-  window.addEventListener("DOMContentLoaded", async () => {
-    if (!gameId) return alert("No game ID found in URL!");
-    const docSnap = await getDoc(doc(db, "games", gameId));
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      (data.items || []).forEach(item => {
-     if (item.type === "text") {
-  const textEl = createText(item.x, item.y, item.content);
-  textEl.style.color = item.color || "black";
-}
+ window.addEventListener("DOMContentLoaded", async () => {
+  if (!gameId) return alert("No game ID found in URL!");
+  const docSnap = await getDoc(doc(db, "games", gameId));
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    (data.items || []).forEach(item => {
+      if (item.type === "text") {
+        createText(item.x, item.y, item.content, item.color); // pass color here
+      } else {
+        createShape(item.x, item.y, item.width, item.height, item.color, item.circle);
+      }
+    });
+  }
+});
 
-        else createShape(item.x, item.y, item.width, item.height, item.color, item.circle);
-      });
-    }
-  });
 </script>
 </body>
 </html>
