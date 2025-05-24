@@ -165,20 +165,21 @@
     canvas.appendChild(shape);
   }
 
-  function createText(x, y, text = "Text") {
-    const el = document.createElement("div");
-    el.className = "text";
-    el.contentEditable = true;
-    el.innerText = text;
-    Object.assign(el.style, {
-      left: `${x}px`,
-      top: `${y}px`,
-      width: `100px`,
-      height: `30px`
-    });
-    makeInteractive(el);
-    canvas.appendChild(el);
-  }
+ function createText(x, y, text = "Text") {
+  const el = document.createElement("div");
+  el.className = "text";
+  el.contentEditable = true;
+  el.innerText = text;
+  Object.assign(el.style, {
+    left: `${x}px`,
+    top: `${y}px`,
+    width: `100px`,
+    height: `30px`
+  });
+  makeInteractive(el);
+  canvas.appendChild(el);
+  return el; // <-- Return element so color can be set
+}
 
   function makeInteractive(el) {
     makeDraggable(el);
@@ -298,7 +299,11 @@
     if (docSnap.exists()) {
       const data = docSnap.data();
       (data.items || []).forEach(item => {
-        if (item.type === "text") createText(item.x, item.y, item.content);
+     if (item.type === "text") {
+  const textEl = createText(item.x, item.y, item.content);
+  textEl.style.color = item.color || "black";
+}
+
         else createShape(item.x, item.y, item.width, item.height, item.color, item.circle);
       });
     }
