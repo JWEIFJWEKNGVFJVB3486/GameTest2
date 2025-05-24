@@ -347,7 +347,7 @@ async function loadProfile() {
 
  ${
   isOwnProfile
-    ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
+    ? `<textarea id="bioInput" rows="4" maxlength="300" placeholder="Write something about yourself...">${bio}</textarea>
        <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
     : `<p><strong>Bio:</strong><br>${bio ? escapeHtml(bio).replace(/\n/g, "<br>") : "No bio set."}</p>`
 }
@@ -437,14 +437,21 @@ async function loadProfile() {
       loadProfile();
     };
 
-    window.saveBio = async function (uid) {
-      const bioText = document.getElementById("bioInput").value.trim();
-      const ref = doc(db, "users", uid);
+   window.saveBio = async function (uid) {
+  const bioText = document.getElementById("bioInput").value.trim();
+  const maxLength = 300;
 
-      await updateDoc(ref, { bio: bioText });
-      currentProfileData.bio = bioText;
-      loadProfile();
-    };
+  if (bioText.length > maxLength) {
+    alert(`Bio cannot exceed ${maxLength} characters.`);
+    return;
+  }
+
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, { bio: bioText });
+  currentProfileData.bio = bioText;
+  loadProfile();
+};
+
 
   </script>
 </body>
