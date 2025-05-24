@@ -56,6 +56,12 @@
 
   const gamesContainer = document.getElementById("gamesContainer");
 
+  function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   async function loadAllGames() {
     const snapshot = await getDocs(collection(firestore, "games"));
     snapshot.forEach(docSnap => {
@@ -63,14 +69,13 @@
       const div = document.createElement("div");
       div.className = "game-item";
       div.innerHTML = `
-        <strong>${data.name}</strong><br>
-        <small>${data.description}</small><br>
+        <strong>${escapeHTML(data.name || "Unnamed Game")}</strong><br>
+        <small>${escapeHTML(data.description || "No description provided.")}</small><br>
         <button class="play-btn">Open</button>
       `;
 
       div.querySelector(".play-btn").addEventListener("click", () => {
-       window.location.href = `play.html?gameId=${docSnap.id}`;
-
+        window.location.href = `play.html?gameId=${docSnap.id}`;
       });
 
       gamesContainer.appendChild(div);
