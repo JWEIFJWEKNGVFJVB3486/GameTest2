@@ -53,12 +53,33 @@
       color: white;
       margin-top: 10px;
     }
+    
+  #homeBtnContainer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+#homeBtnContainer button {
+  background: #007bff;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
   </style>
 </head>
 <body>
 
 <h1>Create or Edit a Game</h1>
+<div id="homeBtnContainer">
+  <button onclick="window.location.href='home.html'">Home</button>
+</div>
 
+  
 <label for="gameName">Game Name</label>
 <input type="text" id="gameName" placeholder="My Awesome Game" />
 
@@ -70,7 +91,6 @@
 <div id="gamesList">
   <h2>Your Games</h2>
   <div id="gamesContainer"></div>
- <button onclick="window.location.href='home.html'">Home</button>
 
 </div>
 
