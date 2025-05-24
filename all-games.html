@@ -209,7 +209,7 @@ async function openGamePanel(gameId) {
     <p>${escapeHTML(game.description)}</p>
     <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
     <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
-    <button class="dislike-btn" id="dislikeCount">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
+    <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
     <div class="comment-box">
       <textarea id="commentText" maxlength="300" placeholder="Add a comment..." oninput="updateCharCounter()"></textarea>
       <div class="char-counter"><span id="charCount">0</span>/300</div>
@@ -217,49 +217,46 @@ async function openGamePanel(gameId) {
     </div>
     <div id="commentsSection"></div>
   `;
+
+  const likeBtn = document.getElementById("likeBtn");
+  const dislikeBtn = document.getElementById("dislikeBtn");
+
+  const userDocRef = currentUser ? doc(db, `games/${gameId}/votes/${currentUser.uid}`) : null;
+  if (userDocRef) {
+    const voteSnap = await getDoc(userDocRef);
+    const vote = voteSnap.exists() ? voteSnap.data().vote : null;
+    if (vote === "like") likeBtn.classList.add("active");
+    if (vote === "dislike") dislikeBtn.classList.add("active");
+
+    likeBtn.onclick = async () => {
+      if (!currentUser) return alert("Log in to vote");
+      const newVote = likeBtn.classList.contains("active") ? null : "like";
+      await handleVote(gameId, newVote);
+      setTimeout(() => openGamePanel(gameId), 300);
+    };
+
+    dislikeBtn.onclick = async () => {
+      if (!currentUser) return alert("Log in to vote");
+      const newVote = dislikeBtn.classList.contains("active") ? null : "dislike";
+      await handleVote(gameId, newVote);
+      setTimeout(() => openGamePanel(gameId), 300);
+    };
+  }
+
+  const commentsRef = collection(db, `games/${gameId}/comments`);
+  onSnapshot(commentsRef, (snapshot) => {
+    const section = document.getElementById("commentsSection");
+    section.innerHTML = "";
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const div = document.createElement("div");
+      div.className = "comment";
+      div.innerHTML = `<strong>${escapeHTML(data.username || "Anonymous")}</strong><br>${escapeHTML(data.text)}`;
+      section.appendChild(div);
+    });
+  });
 }
 
-
-
-    const likeBtn = document.getElementById("likeBtn");
-    const dislikeBtn = document.getElementById("dislikeBtn");
-
-    const userDocRef = currentUser ? doc(db, `games/${gameId}/votes/${currentUser.uid}`) : null;
-    if (userDocRef) {
-      const voteSnap = await getDoc(userDocRef);
-      const vote = voteSnap.exists() ? voteSnap.data().vote : null;
-      if (vote === "like") likeBtn.classList.add("active");
-      if (vote === "dislike") dislikeBtn.classList.add("active");
-
-     likeBtn.onclick = async () => {
-  if (!currentUser) return alert("Log in to vote");
-  const newVote = likeBtn.classList.contains("active") ? null : "like";
-  await handleVote(gameId, newVote);
-  setTimeout(() => openGamePanel(gameId), 300); // Give Firestore time to sync
-};
-
-dislikeBtn.onclick = async () => {
-  if (!currentUser) return alert("Log in to vote");
-  const newVote = dislikeBtn.classList.contains("active") ? null : "dislike";
-  await handleVote(gameId, newVote);
-  setTimeout(() => openGamePanel(gameId), 300);
-};
-
-    }
-
-    const commentsRef = collection(db, `games/${gameId}/comments`);
-    onSnapshot(commentsRef, (snapshot) => {
-      const section = document.getElementById("commentsSection");
-      section.innerHTML = "";
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.className = "comment";
-        div.innerHTML = `<strong>${escapeHTML(data.username || "Anonymous")}</strong><br>${escapeHTML(data.text)}`;
-        section.appendChild(div);
-      });
-    });
-  }
 
   window.addComment = async function(gameId) {
     const text = document.getElementById("commentText").value.trim();
