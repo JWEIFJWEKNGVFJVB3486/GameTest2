@@ -58,6 +58,20 @@
       border-radius: 0;
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
     }
+#commentsSection {
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 2px solid #14a44d;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.char-counter {
+  font-size: 12px;
+  color: #555;
+  float: right;
+  margin-top: 4px;
+}
 
     .modal-overlay {
       display: none;
@@ -174,18 +188,21 @@
 
     gamePanel.style.display = "block";
     modalOverlay.style.display = "block";
-    gameContent.innerHTML = `
-      <h2>${escapeHTML(game.name)}</h2>
-      <p>${escapeHTML(game.description)}</p>
-      <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
-      <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
-      <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
-      <div class="comment-box">
-        <textarea id="commentText" placeholder="Add a comment..."></textarea>
-        <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
-      </div>
-      <div id="commentsSection"></div>
-    `;
+   gameContent.innerHTML = `
+  <h2>${escapeHTML(game.name)}</h2>
+  <p>${escapeHTML(game.description)}</p>
+  <p><strong>By:</strong> ${escapeHTML(game.author || "Unknown")}</p>
+  <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
+  <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
+  <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
+  <div class="comment-box">
+    <textarea id="commentText" maxlength="300" placeholder="Add a comment..." oninput="updateCharCounter()"></textarea>
+    <div class="char-counter"><span id="charCount">0</span>/300</div>
+    <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
+  </div>
+  <div id="commentsSection"></div>
+`;
+
 
     const likeBtn = document.getElementById("likeBtn");
     const dislikeBtn = document.getElementById("dislikeBtn");
