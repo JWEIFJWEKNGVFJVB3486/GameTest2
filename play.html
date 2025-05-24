@@ -527,12 +527,18 @@ function toggleChatInput() {
         equippedHat: userData?.equippedHat || ""
       };
 
-      playerRef = ref(realtimeDb, "players/" + uid);
-      set(playerRef, player);
-      onDisconnect(playerRef).remove();
+   if (!gameId) {
+  console.error("Missing gameId");
+  return;
+}
 
-      // Listeners to keep all players updated
-      const playersRef = ref(realtimeDb, "players");
+playerRef = ref(realtimeDb, `games/${gameId}/players/${uid}`);
+set(playerRef, player);
+onDisconnect(playerRef).remove();
+
+// Listeners to keep all players updated
+const playersRef = ref(realtimeDb, `games/${gameId}/players`);
+
       onChildAdded(playersRef, snapshot => {
         const id = snapshot.key;
         const data = snapshot.val();
