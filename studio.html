@@ -150,22 +150,25 @@
     window.location.href = "create-game.html";
   });
 
-  function createShape(x, y, width, height, color = "#3498db", isCircle = false) {
-    const shape = document.createElement("div");
-    shape.className = "shape";
-    if (isCircle) shape.classList.add("circle");
-    Object.assign(shape.style, {
-      left: `${x}px`,
-      top: `${y}px`,
-      width: `${width}px`,
-      height: `${height}px`,
-      backgroundColor: color,
-    });
-    makeInteractive(shape);
-    canvas.appendChild(shape);
-  }
+function createShape(x, y, width, height, color = "#3498db", isCircle = false, zIndex = 0, borderRadius = "0px") {
+  const shape = document.createElement("div");
+  shape.className = "shape";
+  if (isCircle) shape.classList.add("circle");
+  Object.assign(shape.style, {
+    left: `${x}px`,
+    top: `${y}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+    backgroundColor: color,
+    zIndex: zIndex,
+    borderRadius: borderRadius
+  });
+  makeInteractive(shape);
+  canvas.appendChild(shape);
+}
 
-function createText(x, y, text = "Text", color = "black") {
+
+function createText(x, y, text = "Text", color = "black", zIndex = 0, borderRadius = "0px") {
   const el = document.createElement("div");
   el.className = "text";
   el.contentEditable = true;
@@ -175,7 +178,9 @@ function createText(x, y, text = "Text", color = "black") {
     top: `${y}px`,
     width: `100px`,
     height: `30px`,
-    color: color // ✅ apply color here
+    color: color,
+    zIndex: zIndex,
+    borderRadius: borderRadius
   });
   makeInteractive(el);
   canvas.appendChild(el);
@@ -300,10 +305,12 @@ function createText(x, y, text = "Text", color = "black") {
   if (docSnap.exists()) {
     const data = docSnap.data();
     (data.items || []).forEach(item => {
-      if (item.type === "text") {
-        createText(item.x, item.y, item.content, item.color); // pass color here
-      } else {
-        createShape(item.x, item.y, item.width, item.height, item.color, item.circle);
+     if (item.type === "text") {
+  createText(item.x, item.y, item.content, item.color, item.zIndex, item.borderRadius); // added zIndex and borderRadius
+} else {
+  createShape(item.x, item.y, item.width, item.height, item.color, item.circle, item.zIndex, item.borderRadius);
+}
+
       }
     });
   }
