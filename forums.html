@@ -115,6 +115,12 @@
     let currentUserData = null;
     let currentTab = 'brickbugs';
 
+    function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         window.location.href = "index.html";
@@ -153,56 +159,58 @@
       }
     }
 
-    async function loadPosts() {
-      const postsContainer = document.getElementById("posts");
-      postsContainer.innerHTML = "";
+   async function loadPosts() {
+  const postsContainer = document.getElementById("posts");
+  postsContainer.innerHTML = "";
 
-      const q = query(
-        collection(db, "posts"),
-        where("section", "==", currentTab),
-        orderBy("timestamp", "desc")
-      );
+  const q = query(
+    collection(db, "posts"),
+    where("section", "==", currentTab),
+    orderBy("timestamp", "desc")
+  );
 
-      const querySnapshot = await getDocs(q);
-      for (const docSnap of querySnapshot.docs) {
-        const data = docSnap.data();
-        const postId = docSnap.id;
+  const querySnapshot = await getDocs(q);
+  for (const docSnap of querySnapshot.docs) {
+    const data = docSnap.data();
+    const postId = docSnap.id;
 
-        const div = document.createElement("div");
-        div.className = "post";
-        div.innerHTML = `
-          <h4>${data.title}</h4>
-          <p>${data.content}</p>
-          <small>Posted by ${data.author || "Unknown"} on ${data.timestamp?.toDate().toLocaleString() || "..."}</small>
-          ${data.uid === currentUser.uid ? `<button onclick="deletePost('${postId}')">Delete</button>` : ""}
-          <div class="replies" id="replies-${postId}"></div>
-          <textarea placeholder="Write a reply..." id="reply-input-${postId}"></textarea>
-          <button onclick="submitReply('${postId}')">Reply</button>
-        `;
+    const div = document.createElement("div");
+    div.className = "post";
+    div.innerHTML = `
+      <h4>${escapeHTML(data.title)}</h4>
+      <p>${escapeHTML(data.content)}</p>
+      <small>Posted by ${escapeHTML(data.author || "Unknown")} on ${data.timestamp?.toDate().toLocaleString() || "..."}</small>
+      ${data.uid === currentUser.uid ? `<button onclick="deletePost('${postId}')">Delete</button>` : ""}
+      <div class="replies" id="replies-${postId}"></div>
+      <textarea placeholder="Write a reply..." id="reply-input-${postId}"></textarea>
+      <button onclick="submitReply('${postId}')">Reply</button>
+    `;
 
-        postsContainer.appendChild(div);
-        loadReplies(postId);
-      }
-    }
+    postsContainer.appendChild(div);
+    loadReplies(postId);
+  }
+}
 
-    async function loadReplies(postId) {
-      const repliesContainer = document.getElementById(`replies-${postId}`);
-      repliesContainer.innerHTML = "";
 
-      const repliesRef = collection(db, "posts", postId, "replies");
-      const repliesSnap = await getDocs(query(repliesRef, orderBy("timestamp", "asc")));
+  async function loadReplies(postId) {
+  const repliesContainer = document.getElementById(`replies-${postId}`);
+  repliesContainer.innerHTML = "";
 
-      repliesSnap.forEach(replyDoc => {
-        const r = replyDoc.data();
-        const replyDiv = document.createElement("div");
-        replyDiv.className = "reply";
-        replyDiv.innerHTML = `
-          <p>${r.content}</p>
-          <small>Reply by ${r.author || "Unknown"} on ${r.timestamp?.toDate().toLocaleString() || "..."}</small>
-        `;
-        repliesContainer.appendChild(replyDiv);
-      });
-    }
+  const repliesRef = collection(db, "posts", postId, "replies");
+  const repliesSnap = await getDocs(query(repliesRef, orderBy("timestamp", "asc")));
+
+  repliesSnap.forEach(replyDoc => {
+    const r = replyDoc.data();
+    const replyDiv = document.createElement("div");
+    replyDiv.className = "reply";
+    replyDiv.innerHTML = `
+      <p>${escapeHTML(r.content)}</p>
+      <small>Reply by ${escapeHTML(r.author || "Unknown")} on ${r.timestamp?.toDate().toLocaleString() || "..."}</small>
+    `;
+    repliesContainer.appendChild(replyDiv);
+  });
+}
+
 
     async function submitReply(postId) {
       const textarea = document.getElementById(`reply-input-${postId}`);
