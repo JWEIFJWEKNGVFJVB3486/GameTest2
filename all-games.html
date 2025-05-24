@@ -217,10 +217,7 @@
       }
     }
 
-    if (!visitedGames.has(gameId)) {
-      await updateDoc(docRef, { visits: increment(1) });
-      visitedGames.add(gameId);
-    }
+    // Remove visit increment here!
 
     gamePanel.style.display = "block";
     modalOverlay.style.display = "block";
@@ -229,7 +226,7 @@
       <h2>${escapeHTML(game.name)}</h2>
       <p><strong>By:</strong> ${escapeHTML(authorName)}</p>
       <p>${escapeHTML(game.description)}</p>
-      <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
+      <button class="play-btn" id="playGameBtn">Play Game</button><br><br>
       <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
       <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
       <div class="comment-box">
@@ -239,6 +236,15 @@
       </div>
       <div id="commentsSection"></div>
     `;
+
+    // Play button now increments visits and redirects
+    document.getElementById("playGameBtn").onclick = async () => {
+      if (!visitedGames.has(gameId)) {
+        await updateDoc(docRef, { visits: increment(1) });
+        visitedGames.add(gameId);
+      }
+      window.location.href = `play.html?gameId=${gameId}`;
+    };
 
     const likeBtn = document.getElementById("likeBtn");
     const dislikeBtn = document.getElementById("dislikeBtn");
