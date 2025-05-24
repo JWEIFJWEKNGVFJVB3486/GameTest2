@@ -160,7 +160,7 @@
     let currentProfileData = null;
     let hatsMap = new Map(); // id => hat data
     let facesMap = new Map(); // id => face data
-
+  
     document.addEventListener("DOMContentLoaded", () => {
       const searchBtn = document.getElementById("searchBtn");
       searchBtn.addEventListener("click", searchByUsername);
@@ -286,6 +286,16 @@ window.searchByUsername = async function () {
   loadProfile();
 };
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+    
 async function loadProfile() {
   if (!currentProfileData) {
     document.getElementById("profileData").innerHTML = ""; // Clear if no data
@@ -335,12 +345,13 @@ async function loadProfile() {
 
     <p><strong>Termipoints:</strong> ${termipoints}</p>
 
-    ${
-      isOwnProfile
-        ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
-           <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
-        : `<p><strong>Bio:</strong><br>${bio ? bio.replace(/\n/g, "<br>") : "No bio set."}</p>`
-    }
+ ${
+  isOwnProfile
+    ? `<textarea id="bioInput" rows="4" placeholder="Write something about yourself...">${bio}</textarea>
+       <br /><button class="save-btn" onclick="saveBio('${uid}')">Save Bio</button>`
+    : `<p><strong>Bio:</strong><br>${bio ? escapeHtml(bio).replace(/\n/g, "<br>") : "No bio set."}</p>`
+}
+
 
     <p><strong>Friends:</strong></p>
     <ul>${friendsHtml}</ul>
