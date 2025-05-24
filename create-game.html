@@ -119,6 +119,17 @@
   const descInput = document.getElementById("gameDescription");
   const saveBtn = document.getElementById("saveBtn");
   const gamesContainer = document.getElementById("gamesContainer");
+  function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, function(match) {
+    switch (match) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+    }
+  });
+}
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) return window.location.href = "index.html";
@@ -149,29 +160,32 @@
 });
 
 
-  async function loadGames(uid) {
-    gamesContainer.innerHTML = "";
-    const q = query(collection(firestore, "games"), where("createdBy", "==", uid));
-    const snapshot = await getDocs(q);
+async function loadGames(uid) {
+  gamesContainer.innerHTML = "";
+  const q = query(collection(firestore, "games"), where("createdBy", "==", uid));
+  const snapshot = await getDocs(q);
 
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      const div = document.createElement("div");
-      div.className = "game-item";
-      div.innerHTML = `
-        <strong>${data.name}</strong><br>
-        <small>${data.description}</small><br>
-        <button class="edit-btn">Edit</button>
-      `;
+  snapshot.forEach(docSnap => {
+    const data = docSnap.data();
+    const div = document.createElement("div");
+    div.className = "game-item";
 
-      div.querySelector(".edit-btn").addEventListener("click", () => {
-  // Redirect to studio with game ID
-  window.location.href = `studio.html?gameId=${docSnap.id}`;
-});
+    const safeName = escapeHTML(data.name);
+    const safeDesc = escapeHTML(data.description);
 
-          gamesContainer.appendChild(div);
+    div.innerHTML = `
+      <strong>${safeName}</strong><br>
+      <small>${safeDesc}</small><br>
+      <button class="edit-btn">Edit</button>
+    `;
+
+    div.querySelector(".edit-btn").addEventListener("click", () => {
+      window.location.href = `studio.html?gameId=${docSnap.id}`;
     });
-  }
+
+    gamesContainer.appendChild(div);
+  });
+}
 
 });
 </script>
