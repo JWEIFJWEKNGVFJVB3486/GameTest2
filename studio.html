@@ -148,18 +148,6 @@ let canvasOffsetX = 0;
 let canvasOffsetY = 0;
 let scale = 1;
 
-function updateCanvasOffset() {
-  const items = canvas.querySelectorAll(".shape, .text, .image");
-  items.forEach(item => {
-    item.style.transform = `translate(${canvasOffsetX}px, ${canvasOffsetY}px)`;
-  });
-  if (configPanel) configPanel.remove();
-}
-
-let canvasOffsetX = 0;
-let canvasOffsetY = 0;
-let scale = 1;
-
 function updateCanvasTransform() {
   const items = canvas.querySelectorAll(".shape, .text, .image");
   items.forEach(item => {
