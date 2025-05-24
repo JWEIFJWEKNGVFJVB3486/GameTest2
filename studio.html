@@ -263,7 +263,7 @@ function createShape(x, y, width, height, color = "#3498db", isCircle = false, z
   });
   makeInteractive(shape);
   canvas.appendChild(shape);
-  updateCanvasOffset();
+  updateCanvasTransform();
 }
 
 function createText(x, y, text = "Text", color = "black", zIndex = 0, borderRadius = "0px") {
