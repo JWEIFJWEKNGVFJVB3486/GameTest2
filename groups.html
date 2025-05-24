@@ -126,48 +126,60 @@
       userData.groups = newGroups;
     }
 
-    createGroupForm.onsubmit = async e => {
-      e.preventDefault();
+    const groupBioInput = document.getElementById("groupBioInput");
 
-      const name = groupNameInput.value.trim();
-      if (!name) return;
+createGroupForm.onsubmit = async e => {
+  e.preventDefault();
 
-      const userRef = doc(db, "users", currentUserUid);
-      const userSnap = await getDoc(userRef);
-      userData = userSnap.data(); // Refresh to avoid stale data
+  const name = groupNameInput.value.trim();
+  const bio = groupBioInput.value.trim();
 
-      const cubeBucks = userData.cubeBucks || 0;
-      const userGroups = userData.groups || [];
+  if (!name || !bio) return;
 
-      if (cubeBucks < 100) {
-        showMessage("You need 100 Cube Bucks to create a group.");
-        return;
-      }
+  if (bio.length > 300) {
+    showMessage("Group bio must be 300 characters or less.");
+    return;
+  }
 
-      if (userGroups.length >= 25) {
-        showMessage("You can only be in up to 25 groups.");
-        return;
-      }
+  const userRef = doc(db, "users", currentUserUid);
+  const userSnap = await getDoc(userRef);
+  userData = userSnap.data();
 
-      const newGroup = {
-        name,
-        owner: currentUserUid,
-        members: [currentUserUid]
-      };
+  const cubeBucks = userData.cubeBucks || 0;
+  const userGroups = userData.groups || [];
 
-      const groupDocRef = await addDoc(collection(db, "groups"), newGroup);
+  if (cubeBucks < 100) {
+    showMessage("You need 100 Cube Bucks to create a group.");
+    return;
+  }
 
-      await updateDoc(userRef, {
-        cubeBucks: cubeBucks - 100,
-        groups: [...userGroups, groupDocRef.id]
-      });
+  if (userGroups.length >= 25) {
+    showMessage("You can only be in up to 25 groups.");
+    return;
+  }
 
-      userData.cubeBucks -= 100;
-      userData.groups.push(groupDocRef.id);
-      userInfo.textContent = `${userData.username || "User"} — ${userData.cubeBucks}`;
-      groupNameInput.value = "";
-      showMessage("Group created!");
-    };
+  const newGroup = {
+    name,
+    bio,
+    owner: currentUserUid,
+    members: [currentUserUid]
+  };
+
+  const groupDocRef = await addDoc(collection(db, "groups"), newGroup);
+
+  await updateDoc(userRef, {
+    cubeBucks: cubeBucks - 100,
+    groups: [...userGroups, groupDocRef.id]
+  });
+
+  userData.cubeBucks -= 100;
+  userData.groups.push(groupDocRef.id);
+  userInfo.textContent = `${userData.username || "User"} — ${userData.cubeBucks}`;
+  groupNameInput.value = "";
+  groupBioInput.value = "";
+  showMessage("Group created!");
+};
+
 
     function showMessage(msg) {
       message.textContent = msg;
@@ -235,9 +247,11 @@
   <main>
     <h2>Groups</h2>
     <form id="createGroupForm">
-      <input type="text" id="groupNameInput" placeholder="Group Name" maxlength="32" required />
-      <button type="submit">Create Group (100 Cube Bucks)</button>
-    </form>
+  <input type="text" id="groupNameInput" placeholder="Group Name" maxlength="32" required />
+  <textarea id="groupBioInput" placeholder="Group Bio (max 300 characters)" maxlength="300" required></textarea>
+  <button type="submit">Create Group (100 Cube Bucks)</button>
+</form>
+
 
     <p id="message" style="color: red;"></p>
     <div id="groupsContainer"></div>
