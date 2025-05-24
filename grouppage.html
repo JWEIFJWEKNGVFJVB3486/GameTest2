@@ -37,70 +37,68 @@
     const chatInput = document.getElementById("chatInput");
 
     onAuthStateChanged(auth, async user => {
-      if (!user) return window.location.href = "/login.html";
-      currentUserUid = user.uid;
+  if (!user) return window.location.href = "/login.html";
+  currentUserUid = user.uid;
 
-      const groupDoc = await getDoc(doc(db, "groups", groupId));
-      if (!groupDoc.exists()) return alert("Group not found");
+  const groupDoc = await getDoc(doc(db, "groups", groupId));
+  if (!groupDoc.exists()) return alert("Group not found");
 
-      groupData = groupDoc.data();
-      userIsMember = groupData.members?.includes(currentUserUid);
-      userIsOwner = groupData.owner === currentUserUid;
+  groupData = groupDoc.data();
+  userIsMember = groupData.members?.includes(currentUserUid);
+  userIsOwner = groupData.owner === currentUserUid;
 
-      const ownerDoc = await getDoc(doc(db, "users", groupData.owner));
-      const ownerName = ownerDoc.exists() ? (ownerDoc.data().username || "Unknown") : "Unknown";
+  const ownerDoc = await getDoc(doc(db, "users", groupData.owner));
+  const ownerName = ownerDoc.exists() ? (ownerDoc.data().username || "Unknown") : "Unknown";
 
-      titleEl.textContent = `${groupData.name} (Leader: ${ownerName})`;
-      bioEl.textContent = groupData.bio || "No bio yet.";
-      bioInput.value = groupData.bio || "";
+  titleEl.textContent = `${groupData.name} (Leader: ${ownerName})`;
+  bioEl.textContent = groupData.bio || "No bio yet.";
+  bioInput.value = groupData.bio || "";
 
-      if (!userIsOwner) {
-        bioInput.style.display = "none";
-        updateBioBtn.style.display = "none";  
-      }
-    // If no owner and deletionScheduledAt is not set, schedule deletion
-if (!groupData.owner && !groupData.deletionScheduledAt) {
-  const deletionTime = Date.now() + 3 * 24 * 60 * 60 * 1000; // 3 days from now hopefully?
-  await updateDoc(doc(db, "groups", groupId), {
-    deletionScheduledAt: deletionTime
-  });
-}
+  if (!userIsOwner) {
+    bioInput.style.display = "none";
+    updateBioBtn.style.display = "none";  
+  }
 
-// If deletionScheduledAt is in the past, delete the group
-if (groupData.deletionScheduledAt && Date.now() > groupData.deletionScheduledAt) {
-  await deleteDoc(doc(db, "groups", groupId));
-  alert("This group has expired and is now deleted.");
-  return window.location.href = "/groups.html";
-}
-
-      if (!userIsMember) {
-        chatForm.style.display = "none";
-        chatBox.innerHTML = "<p style='color:red;'>You must be a member to view or send messages.</p>";
-      } else {
-        loadMessages();
-      }
-    });
-
-    updateBioBtn.onclick = async () => {
-      const newBio = bioInput.value.trim();
-      await updateDoc(doc(db, "groups", groupId), { bio: newBio });
-      bioEl.textContent = newBio;
+  const deleteGroupBtn = document.getElementById("deleteGroupBtn");
+  if (userIsOwner) {
+    deleteGroupBtn.style.display = "block"; 
+    deleteGroupBtn.onclick = async () => {
+      if (!confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
+      await deleteDoc(doc(db, "groups", groupId));
+      window.location.href = "/groups.html";
     };
-const deleteGroupBtn = document.getElementById("deleteGroupBtn");
+  } else {
+    deleteGroupBtn.style.display = "none"; 
+  }
 
-if (userIsOwner) {
-  deleteGroupBtn.style.display = "block"; // ensure it's visible
-  deleteGroupBtn.onclick = async () => {
-    if (!confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
+
+  if (!groupData.owner && !groupData.deletionScheduledAt) {
+    const deletionTime = Date.now() + 3 * 24 * 60 * 60 * 1000; // 3 days
+    await updateDoc(doc(db, "groups", groupId), {
+      deletionScheduledAt: deletionTime
+    });
+  }
+
+  if (groupData.deletionScheduledAt && Date.now() > groupData.deletionScheduledAt) {
     await deleteDoc(doc(db, "groups", groupId));
-    window.location.href = "/groups.html";
-  };
-} else {
-  deleteGroupBtn.style.display = "none";
-}
+    alert("This group has expired and is now deleted.");
+    return window.location.href = "/groups.html";
+  }
 
-  
-}
+  if (!userIsMember) {
+    chatForm.style.display = "none";
+    chatBox.innerHTML = "<p style='color:red;'>You must be a member to view or send messages.</p>";
+  } else {
+    loadMessages();
+  }
+});
+
+updateBioBtn.onclick = async () => {
+  const newBio = bioInput.value.trim();
+  await updateDoc(doc(db, "groups", groupId), { bio: newBio });
+  bioEl.textContent = newBio;
+};
+
 
     chatForm.onsubmit = async e => {
       e.preventDefault();
