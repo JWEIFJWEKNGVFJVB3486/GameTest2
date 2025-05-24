@@ -123,47 +123,90 @@
   const auth = firebase.auth();
   const db   = firebase.firestore();
 
+  // Escape HTML to prevent XSS attacks
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, function(match) {
+      switch (match) {
+        case "&": return "&amp;";
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case '"': return "&quot;";
+        case "'": return "&#39;";
+      }
+    });
+  }
+
+  function setMessage(text, color = "black") {
+    const msg = document.getElementById("message");
+    msg.innerHTML = escapeHTML(text);
+    msg.style.color = color;
+  }
+
   async function signup() {
-    const username = document.getElementById("signup-username").value.trim();
+    let username = document.getElementById("signup-username").value.trim();
     const email    = document.getElementById("signup-email").value.trim();
     const password = document.getElementById("signup-password").value.trim();
     const gender   = document.getElementById("gender").value;
-    const msg      = document.getElementById("message");
 
     if (!username || !email || !password || !gender) {
-      msg.textContent = "Please fill out every field."; msg.style.color="red"; return;
+      setMessage("Please fill out every field.", "red");
+      return;
     }
 
-    const existing = await db.collection("users").where("username","==",username).limit(1).get();
-    if (!existing.empty) { msg.textContent="Username already in use."; msg.style.color="red"; return; }
+    if (username.length > 20) {
+      setMessage("Username cannot be longer than 20 characters.", "red");
+      return;
+    }
+
+    if (!/\S/.test(username)) { // username contains only spaces?
+      setMessage("Username cannot be only spaces.", "red");
+      return;
+    }
 
     try {
-      const { user } = await auth.createUserWithEmailAndPassword(email,password);
+      // Check if username already exists
+      const existing = await db.collection("users").where("username", "==", username).limit(1).get();
+      if (!existing.empty) {
+        setMessage("Username already in use.", "red");
+        return;
+      }
+
+      const { user } = await auth.createUserWithEmailAndPassword(email, password);
       await db.collection("users").doc(user.uid).set({
-        username, email, gender, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        username,
+        email,
+        gender,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      msg.textContent = "Account created! Redirecting…"; msg.style.color="green";
-      setTimeout(()=>location.href="home.html",1500);
-    } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
+      setMessage("Account created! Redirecting…", "green");
+      setTimeout(() => location.href = "home.html", 1500);
+    } catch (e) {
+      setMessage(e.message, "red");
+    }
   }
 
   async function login() {
     const username = document.getElementById("login-username").value.trim();
     const password = document.getElementById("login-password").value.trim();
-    const msg      = document.getElementById("message");
 
-    if (!username || !password) { msg.textContent="Enter username & password."; msg.style.color="red"; return; }
+    if (!username || !password) {
+      setMessage("Enter username & password.", "red");
+      return;
+    }
 
     try {
-      const snap = await db.collection("users").where("username","==",username).limit(1).get();
+      const snap = await db.collection("users").where("username", "==", username).limit(1).get();
       if (snap.empty) throw new Error("Username not found.");
       const userDoc = snap.docs[0].data();
-      await auth.signInWithEmailAndPassword(userDoc.email,password);
-      msg.textContent="Login successful! Redirecting…"; msg.style.color="green";
-      setTimeout(()=>location.href="home.html",1500);
-    } catch(e){ msg.textContent=e.message; msg.style.color="red"; }
+      await auth.signInWithEmailAndPassword(userDoc.email, password);
+      setMessage("Login successful! Redirecting…", "green");
+      setTimeout(() => location.href = "home.html", 1500);
+    } catch (e) {
+      setMessage(e.message, "red");
+    }
   }
 </script>
+
 
 </body>
 </html>
