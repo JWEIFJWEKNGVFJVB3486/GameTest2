@@ -299,22 +299,39 @@ function createText(x, y, text = "Text", color = "black", zIndex = 0, borderRadi
     });
   }
 
- window.addEventListener("DOMContentLoaded", async () => {
+window.addEventListener("DOMContentLoaded", async () => {
   if (!gameId) return alert("No game ID found in URL!");
+  
   const docSnap = await getDoc(doc(db, "games", gameId));
   if (docSnap.exists()) {
     const data = docSnap.data();
+    
     (data.items || []).forEach(item => {
-     if (item.type === "text") {
-  createText(item.x, item.y, item.content, item.color, item.zIndex, item.borderRadius); // added zIndex and borderRadius
-} else {
-  createShape(item.x, item.y, item.width, item.height, item.color, item.circle, item.zIndex, item.borderRadius);
-}
-
+      if (item.type === "text") {
+        createText(
+          item.x,
+          item.y,
+          item.content,
+          item.color,
+          item.zIndex,
+          item.borderRadius
+        );
+      } else {
+        createShape(
+          item.x,
+          item.y,
+          item.width,
+          item.height,
+          item.color,
+          item.circle,
+          item.zIndex,
+          item.borderRadius
+        );
       }
     });
   }
 });
+
 
 </script>
 </body>
