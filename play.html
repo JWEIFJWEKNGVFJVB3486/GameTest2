@@ -122,8 +122,7 @@
 </div>
 
 <script type="module">
-  
- import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -186,24 +185,9 @@ async function loadBlocks() {
     return;
   }
 
- const data = snap.data();
+  const data = gameSnap.data();
 
-  if (data.equippedHat && !hatImages[uid]) {
-    const hatImg = new Image();
-    hatImg.src = data.equippedHat; // Or lookup from hats collection if needed
-    hatImages[uid] = hatImg;
-  }
-
-  if (data.equippedFace && !faceImages[uid]) {
-    const faceDoc = await getDoc(doc(firestore, "faces", data.equippedFace));
-    if (faceDoc.exists()) {
-      const faceImg = new Image();
-      faceImg.src = faceDoc.data().imageUrl;
-      faceImages[uid] = faceImg;
-    }
-  }
-
-   if (!data.items || !Array.isArray(data.items)) {
+  if (!data.items || !Array.isArray(data.items)) {
     console.error("No items array found in game document");
     items = [];
     return;
@@ -215,10 +199,6 @@ async function loadBlocks() {
 
   console.log("Items loaded from Firestore:", items);
 }
-  return data;
-}
-
-
 
 function roundRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
@@ -243,49 +223,13 @@ function draw() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // Draw viewport border (optional)
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
   ctx.translate(-camX, -camY);
 
-  for (const uid in players) {
-    const p = players[uid];
-    if (!p || typeof p.x !== "number" || typeof p.y !== "number") continue;
-
-    // Draw avatar (80x80)
-    ctx.fillStyle = p.color || "#000";
-    ctx.fillRect(p.x - 40, p.y - 40, 80, 80);
-
-    // Draw username
-    ctx.fillStyle = "black";
-    ctx.font = "20px Comic Sans MS";
-    ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
-
-    // Draw face
-    const faceImg = faceImages[uid];
-    if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
-      ctx.drawImage(faceImg, p.x - 30, p.y - 30, 60, 60);
-    }
-
-    // Draw hat
-    if (p.equippedHat && hatImages[p.equippedHat]) {
-      const img = hatImages[p.equippedHat];
-      if (img.complete && img.naturalWidth !== 0) {
-        ctx.drawImage(img, p.x - 36, p.y - 86, 80, 80);
-      }
-    }
-
-    // Draw chat bubble
-    if (p.chat) {
-      ctx.fillStyle = "white";
-      ctx.strokeStyle = "black";
-      ctx.font = "16px Comic Sans MS";
-      const textWidth = ctx.measureText(p.chat).width;
-      ctx.fillRect(p.x - textWidth / 2 - 8, p.y - 90, textWidth + 16, 24);
-      ctx.strokeRect(p.x - textWidth / 2 - 8, p.y - 90, textWidth + 16, 24);
-      ctx.fillStyle = "black";
-      ctx.fillText(p.chat, p.x - textWidth / 2, p.y - 75);
-    }
-  }
-
-  
   // Draw game items
   for (const item of items) {
     if (!item) continue;
@@ -475,47 +419,17 @@ chatButton.addEventListener("click", () => {
   }
 });
 
- onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      await loadHats();
-
-      const uid = user.uid;
-      const userData = await fetchUserData(uid);
-      const username = userData?.username || "Unnamed";
-
-      player = {
-        username,
-        x: Math.random() * (canvas.width - 100) + 50,
-        y: Math.random() * (canvas.height - 100) + 50,
-        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
-        equippedHat: userData?.equippedHat || ""
-      };
-
-      playerRef = ref(realtimeDb, "players/" + uid);
-      set(playerRef, player);
-      onDisconnect(playerRef).remove();
-
-      // Listeners to keep all players updated
-      const playersRef = ref(realtimeDb, "players");
-      onChildAdded(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
-
-      onChildChanged(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
-
-      onChildRemoved(playersRef, snapshot => {
-        const id = snapshot.key;
-        delete players[id];
-      });
-
-      loop();
-    });
+// Main auth listener and game start
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    await loadBlocks();
+    await setupPlayer(user.uid, user.displayName || user.email || "Player");
+    update();  // Start the game loop
+  } else {
+    console.log("Not logged in");
+    // redirect or show login screen
+  }
+});
 
 
 
