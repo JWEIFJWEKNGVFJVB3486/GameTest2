@@ -3,7 +3,7 @@
 <head>
   <title>Studio - Edit Game</title>
   <style>
-    body {
+     body {
       font-family: Arial, sans-serif;
       margin: 20px;
       background: #fafafa;
@@ -64,6 +64,34 @@
       display: block;
       margin-bottom: 5px;
     }
+    #mobileControls {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .mobile-btn {
+      width: 40px;
+      height: 40px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 20px;
+    }
+    #zoomControls {
+      position: fixed;
+      bottom: 10px;
+      left: 70px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      z-index: 9999;
+    }
+
   </style>
 </head>
 <body>
@@ -77,7 +105,16 @@
 </div>
 
 <div id="canvas"></div>
-
+<div id="mobileControls">
+  <button class="mobile-btn" id="upBtn">↑</button>
+  <button class="mobile-btn" id="leftBtn">←</button>
+  <button class="mobile-btn" id="downBtn">↓</button>
+  <button class="mobile-btn" id="rightBtn">→</button>
+</div>
+<div id="zoomControls">
+  <button class="mobile-btn" id="zoomIn">+</button>
+  <button class="mobile-btn" id="zoomOut">-</button>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -109,6 +146,7 @@ let unsavedChanges = false;
 
 let canvasOffsetX = 0;
 let canvasOffsetY = 0;
+let scale = 1;
 
 function updateCanvasOffset() {
   const items = canvas.querySelectorAll(".shape, .text, .image");
@@ -118,13 +156,64 @@ function updateCanvasOffset() {
   if (configPanel) configPanel.remove();
 }
 
+let canvasOffsetX = 0;
+let canvasOffsetY = 0;
+let scale = 1;
+
+function updateCanvasTransform() {
+  const items = canvas.querySelectorAll(".shape, .text, .image");
+  items.forEach(item => {
+    item.style.transform = `translate(${canvasOffsetX}px, ${canvasOffsetY}px) scale(${scale})`;
+    item.style.transformOrigin = "top left";
+  });
+  if (configPanel) configPanel.remove();
+}
+
 window.addEventListener("keydown", (e) => {
-  const speed = 20;
-  if (e.key === "w") canvasOffsetY += speed;
-  if (e.key === "s") canvasOffsetY -= speed;
-  if (e.key === "a") canvasOffsetX += speed;
-  if (e.key === "d") canvasOffsetX -= speed;
-  updateCanvasOffset();
+  const moveSpeed = 20;
+  if (e.key === "w") canvasOffsetY += moveSpeed;
+  if (e.key === "s") canvasOffsetY -= moveSpeed;
+  if (e.key === "a") canvasOffsetX += moveSpeed;
+  if (e.key === "d") canvasOffsetX -= moveSpeed;
+  updateCanvasTransform();
+});
+
+// Mobile control bindings
+const bindMobileMovement = (id, dx, dy) => {
+  const btn = document.getElementById(id);
+  let interval;
+  btn.addEventListener("touchstart", () => {
+    interval = setInterval(() => {
+      canvasOffsetX += dx;
+      canvasOffsetY += dy;
+      updateCanvasTransform();
+    }, 100);
+  });
+  btn.addEventListener("touchend", () => clearInterval(interval));
+};
+
+bindMobileMovement("upBtn", 0, 20);
+bindMobileMovement("downBtn", 0, -20);
+bindMobileMovement("leftBtn", 20, 0);
+bindMobileMovement("rightBtn", -20, 0);
+
+// Mouse wheel zoom
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const zoomAmount = 0.1;
+  scale += e.deltaY < 0 ? zoomAmount : -zoomAmount;
+  scale = Math.min(Math.max(scale, 0.2), 3);
+  updateCanvasTransform();
+});
+
+// Mobile zoom
+zoomIn.addEventListener("click", () => {
+  scale = Math.min(scale + 0.1, 3);
+  updateCanvasTransform();
+});
+zoomOut.addEventListener("click", () => {
+  scale = Math.max(scale - 0.1, 0.2);
+  updateCanvasTransform();
 });
 
 addSquareBtn.addEventListener("click", () => {
