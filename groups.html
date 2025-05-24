@@ -56,30 +56,42 @@
     });
 
     async function loadGroups() {
-      const q = query(collection(db, "groups"));
-      onSnapshot(q, snapshot => {
-        groupsContainer.innerHTML = "";
-        snapshot.forEach(docSnap => {
-          const group = docSnap.data();
-          const groupId = docSnap.id;
-          const isMember = group.members?.includes(currentUserUid);
+  const q = query(collection(db, "groups"));
+  onSnapshot(q, snapshot => {
+    groupsContainer.innerHTML = "";
+    snapshot.forEach(docSnap => {
+      const group = docSnap.data();
+      const groupId = docSnap.id;
+      const isMember = group.members?.includes(currentUserUid);
 
-          const div = document.createElement("div");
-          div.innerHTML = `
-  <a href="grouppage.html?id=${groupId}" style="text-decoration: none; color: black;">
-    <strong>${group.name}</strong>
-  </a> (${group.members?.length || 0} members)
-  <button>${isMember ? "Leave" : "Join"}</button>
-`;
+      const div = document.createElement("div");
+      div.className = "group-item";
 
+      const groupLink = document.createElement("a");
+      groupLink.href = `grouppage.html?id=${groupId}`;
+      groupLink.style.textDecoration = "none";
+      groupLink.style.color = "black";
+      groupLink.textContent = group.name;
 
-          const button = div.querySelector("button");
-          button.onclick = () => isMember ? leaveGroup(groupId) : joinGroup(groupId);
+      const strong = document.createElement("strong");
+      strong.appendChild(groupLink);
 
-          groupsContainer.appendChild(div);
-        });
-      });
-    }
+      const memberCount = document.createTextNode(` (${group.members?.length || 0} members)`);
+
+      const button = document.createElement("button");
+      button.textContent = isMember ? "Leave" : "Join";
+      button.onclick = () => isMember ? leaveGroup(groupId) : joinGroup(groupId);
+
+      div.appendChild(strong);
+      div.appendChild(memberCount);
+      div.appendChild(document.createElement("br"));
+      div.appendChild(button);
+
+      groupsContainer.appendChild(div);
+    });
+  });
+}
+
 
     async function joinGroup(groupId) {
       const userRef = doc(db, "users", currentUserUid);
