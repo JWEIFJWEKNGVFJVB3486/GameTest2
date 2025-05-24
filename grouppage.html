@@ -86,16 +86,19 @@ if (groupData.deletionScheduledAt && Date.now() > groupData.deletionScheduledAt)
       await updateDoc(doc(db, "groups", groupId), { bio: newBio });
       bioEl.textContent = newBio;
     };
-  const deleteGroupBtn = document.getElementById("deleteGroupBtn");
+const deleteGroupBtn = document.getElementById("deleteGroupBtn");
 
 if (userIsOwner) {
+  deleteGroupBtn.style.display = "block"; // ensure it's visible
   deleteGroupBtn.onclick = async () => {
     if (!confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
     await deleteDoc(doc(db, "groups", groupId));
-    window.location.href = "/groups.html"; // redirect after deletion
+    window.location.href = "/groups.html";
   };
 } else {
   deleteGroupBtn.style.display = "none";
+}
+
   
 }
 
