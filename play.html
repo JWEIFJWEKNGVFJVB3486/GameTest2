@@ -401,10 +401,10 @@ function draw() {
     function loop() {
       if (!player) return;
       let moved = false;
-      if (keys["w"] || keys["arrowup"]) { player.y -= 2; moved = true; }
-      if (keys["s"] || keys["arrowdown"]) { player.y += 2; moved = true; }
-      if (keys["a"] || keys["arrowleft"]) { player.x -= 2; moved = true; }
-      if (keys["d"] || keys["arrowright"]) { player.x += 2; moved = true; }
+      if (keys["w"] || keys["arrowup"]) { player.y -= 5; moved = true; }
+      if (keys["s"] || keys["arrowdown"]) { player.y += 5; moved = true; }
+      if (keys["a"] || keys["arrowleft"]) { player.x -= 5; moved = true; }
+      if (keys["d"] || keys["arrowright"]) { player.x += 5; moved = true; }
       if (moved) {
         set(playerRef, player);
       }
