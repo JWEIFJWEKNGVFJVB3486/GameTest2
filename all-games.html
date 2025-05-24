@@ -146,6 +146,7 @@
   const gamePanel = document.getElementById("gamePanel");
   const gameContent = document.getElementById("gameContent");
   const modalOverlay = document.getElementById("modalOverlay");
+  const visitedGames = new Set();
 
   function escapeHTML(str) {
     const div = document.createElement("div");
@@ -178,30 +179,46 @@
     gameContent.innerHTML = "";
   };
 
-  async function openGamePanel(gameId) {
-    const docRef = doc(db, "games", gameId);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists()) return;
+async function openGamePanel(gameId) {
+  const docRef = doc(db, "games", gameId);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return;
 
+  const game = docSnap.data(); 
+  const createdByUid = game.createdBy;
+  let authorName = "Unknown";
+
+  if (createdByUid) {
+    const userDoc = await getDoc(doc(db, "users", createdByUid));
+    if (userDoc.exists()) {
+      authorName = userDoc.data().username || "Unknown";
+    }
+  }
+
+  if (!visitedGames.has(gameId)) {
     await updateDoc(docRef, { visits: increment(1) });
-    const game = docSnap.data();
+    visitedGames.add(gameId);
+  }
 
-    gamePanel.style.display = "block";
-    modalOverlay.style.display = "block";
-   gameContent.innerHTML = `
-  <h2>${escapeHTML(game.name)}</h2>
-  <p>${escapeHTML(game.description)}</p>
-  <p><strong>By:</strong> ${escapeHTML(game.author || "Unknown")}</p>
-  <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
-  <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
-  <button class="dislike-btn" id="dislikeBtn">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
-  <div class="comment-box">
-    <textarea id="commentText" maxlength="300" placeholder="Add a comment..." oninput="updateCharCounter()"></textarea>
-    <div class="char-counter"><span id="charCount">0</span>/300</div>
-    <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
-  </div>
-  <div id="commentsSection"></div>
-`;
+  gamePanel.style.display = "block";
+  modalOverlay.style.display = "block";
+
+  gameContent.innerHTML = `
+    <h2>${escapeHTML(game.name)}</h2>
+    <p><strong>By:</strong> ${escapeHTML(authorName)}</p>
+    <p>${escapeHTML(game.description)}</p>
+    <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button><br><br>
+    <button class="like-btn" id="likeBtn">Like (<span id="likeCount">${game.likes || 0}</span>)</button>
+    <button class="dislike-btn" id="dislikeCount">Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
+    <div class="comment-box">
+      <textarea id="commentText" maxlength="300" placeholder="Add a comment..." oninput="updateCharCounter()"></textarea>
+      <div class="char-counter"><span id="charCount">0</span>/300</div>
+      <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
+    </div>
+    <div id="commentsSection"></div>
+  `;
+}
+
 
 
     const likeBtn = document.getElementById("likeBtn");
@@ -214,19 +231,20 @@
       if (vote === "like") likeBtn.classList.add("active");
       if (vote === "dislike") dislikeBtn.classList.add("active");
 
-      likeBtn.onclick = async () => {
-        if (!currentUser) return alert("Log in to vote");
-        const newVote = likeBtn.classList.contains("active") ? null : "like";
-        await handleVote(gameId, newVote);
-        openGamePanel(gameId);
-      };
+     likeBtn.onclick = async () => {
+  if (!currentUser) return alert("Log in to vote");
+  const newVote = likeBtn.classList.contains("active") ? null : "like";
+  await handleVote(gameId, newVote);
+  setTimeout(() => openGamePanel(gameId), 300); // Give Firestore time to sync
+};
 
-      dislikeBtn.onclick = async () => {
-        if (!currentUser) return alert("Log in to vote");
-        const newVote = dislikeBtn.classList.contains("active") ? null : "dislike";
-        await handleVote(gameId, newVote);
-        openGamePanel(gameId);
-      };
+dislikeBtn.onclick = async () => {
+  if (!currentUser) return alert("Log in to vote");
+  const newVote = dislikeBtn.classList.contains("active") ? null : "dislike";
+  await handleVote(gameId, newVote);
+  setTimeout(() => openGamePanel(gameId), 300);
+};
+
     }
 
     const commentsRef = collection(db, `games/${gameId}/comments`);
