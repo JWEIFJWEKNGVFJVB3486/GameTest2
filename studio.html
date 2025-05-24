@@ -8,6 +8,7 @@
       margin: 20px;
       background: #fafafa;
       user-select: none;
+      overflow: hidden;
     }
     #toolbar {
       margin-bottom: 10px;
@@ -30,7 +31,7 @@
       background: #3498db;
     }
     .circle {
-      border-radius: 50%;
+      border-radius: 50% !important;
     }
     .text {
       background: none;
@@ -76,79 +77,99 @@
 </div>
 
 <div id="canvas"></div>
+
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
-    authDomain: "gametest2-ba5fe.firebaseapp.com",
-    databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
-    projectId: "gametest2-ba5fe",
-    storageBucket: "gametest2-ba5fe.appspot.com",
-    messagingSenderId: "1063979387642",
-    appId: "1:1063979387642:web:307e4621ae0394bcb49743",
-    measurementId: "G-394Y1PYWV7"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
+  authDomain: "gametest2-ba5fe.firebaseapp.com",
+  databaseURL: "https://gametest2-ba5fe-default-rtdb.firebaseio.com",
+  projectId: "gametest2-ba5fe",
+  storageBucket: "gametest2-ba5fe.appspot.com",
+  messagingSenderId: "1063979387642",
+  appId: "1:1063979387642:web:307e4621ae0394bcb49743",
+  measurementId: "G-394Y1PYWV7"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-  const canvas = document.getElementById("canvas");
-  const addSquareBtn = document.getElementById("addSquareBtn");
-  const addCircleBtn = document.getElementById("addCircleBtn");
-  const addTextBtn = document.getElementById("addTextBtn");
-  const saveBtn = document.getElementById("saveBtn");
-  const backBtn = document.getElementById("backBtn");
+const canvas = document.getElementById("canvas");
+const addSquareBtn = document.getElementById("addSquareBtn");
+const addCircleBtn = document.getElementById("addCircleBtn");
+const addTextBtn = document.getElementById("addTextBtn");
+const saveBtn = document.getElementById("saveBtn");
+const backBtn = document.getElementById("backBtn");
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const gameId = urlParams.get("gameId");
-  let unsavedChanges = false;
+const urlParams = new URLSearchParams(window.location.search);
+const gameId = urlParams.get("gameId");
+let unsavedChanges = false;
 
-  let selectedElement = null;
-  let configPanel = null;
+let canvasOffsetX = 0;
+let canvasOffsetY = 0;
 
-  addSquareBtn.addEventListener("click", () => {
-    createShape(50, 50, 100, 100);
-    unsavedChanges = true;
+function updateCanvasOffset() {
+  const items = canvas.querySelectorAll(".shape, .text, .image");
+  items.forEach(item => {
+    item.style.transform = `translate(${canvasOffsetX}px, ${canvasOffsetY}px)`;
   });
+  if (configPanel) configPanel.remove();
+}
 
-  addCircleBtn.addEventListener("click", () => {
-    createShape(100, 100, 100, 100, "#e74c3c", true);
-    unsavedChanges = true;
-  });
+window.addEventListener("keydown", (e) => {
+  const speed = 20;
+  if (e.key === "w") canvasOffsetY += speed;
+  if (e.key === "s") canvasOffsetY -= speed;
+  if (e.key === "a") canvasOffsetX += speed;
+  if (e.key === "d") canvasOffsetX -= speed;
+  updateCanvasOffset();
+});
 
-  addTextBtn.addEventListener("click", () => {
-    createText(150, 150, "New Text");
-    unsavedChanges = true;
-  });
+addSquareBtn.addEventListener("click", () => {
+  createShape(50 - canvasOffsetX, 50 - canvasOffsetY, 100, 100);
+  unsavedChanges = true;
+});
 
-  saveBtn.addEventListener("click", async () => {
-    const data = [];
-    document.querySelectorAll(".shape, .text, .image").forEach(el => {
-      const item = {
-        type: el.classList.contains("text") ? "text" : el.classList.contains("image") ? "image" : "shape",
-        x: parseInt(el.style.left),
-        y: parseInt(el.style.top),
-        width: parseInt(el.style.width),
-        height: parseInt(el.style.height),
-        zIndex: parseInt(el.style.zIndex || 0),
-        borderRadius: el.style.borderRadius || "0px",
-        color: el.classList.contains("text") ? el.style.color : el.style.backgroundColor,
-        content: el.classList.contains("text") ? el.textContent : el.getAttribute("src") || "",
-        circle: el.classList.contains("circle") || false
-      };
-      data.push(item);
-    });
-    await updateDoc(doc(db, "games", gameId), { items: data });
-    unsavedChanges = false;
-    alert("Game saved!");
-  });
+addCircleBtn.addEventListener("click", () => {
+  createShape(100 - canvasOffsetX, 100 - canvasOffsetY, 100, 100, "#e74c3c", true);
+  unsavedChanges = true;
+});
 
-  backBtn.addEventListener("click", () => {
-    if (unsavedChanges && !confirm("You have unsaved changes. Are you sure you want to leave?")) return;
-    window.location.href = "create-game.html";
+addTextBtn.addEventListener("click", () => {
+  createText(150 - canvasOffsetX, 150 - canvasOffsetY, "New Text");
+  unsavedChanges = true;
+});
+
+saveBtn.addEventListener("click", async () => {
+  const data = [];
+  document.querySelectorAll(".shape, .text, .image").forEach(el => {
+    const rect = el.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    const item = {
+      type: el.classList.contains("text") ? "text" : el.classList.contains("image") ? "image" : "shape",
+      x: parseInt(el.style.left),
+      y: parseInt(el.style.top),
+      width: parseInt(el.style.width),
+      height: parseInt(el.style.height),
+      zIndex: parseInt(el.style.zIndex || 0),
+      borderRadius: el.style.borderRadius || "0px",
+      color: el.classList.contains("text") ? el.style.color : el.style.backgroundColor,
+      content: el.classList.contains("text") ? el.textContent : el.getAttribute("src") || "",
+      circle: el.classList.contains("circle") || false
+    };
+    data.push(item);
   });
+  await updateDoc(doc(db, "games", gameId), { items: data });
+  unsavedChanges = false;
+  alert("Game saved!");
+});
+
+backBtn.addEventListener("click", () => {
+  if (unsavedChanges && !confirm("You have unsaved changes. Are you sure you want to leave?")) return;
+  window.location.href = "create-game.html";
+});
 
 function createShape(x, y, width, height, color = "#3498db", isCircle = false, zIndex = 0, borderRadius = "0px") {
   const shape = document.createElement("div");
@@ -165,8 +186,8 @@ function createShape(x, y, width, height, color = "#3498db", isCircle = false, z
   });
   makeInteractive(shape);
   canvas.appendChild(shape);
+  updateCanvasOffset();
 }
-
 
 function createText(x, y, text = "Text", color = "black", zIndex = 0, borderRadius = "0px") {
   const el = document.createElement("div");
@@ -184,155 +205,136 @@ function createText(x, y, text = "Text", color = "black", zIndex = 0, borderRadi
   });
   makeInteractive(el);
   canvas.appendChild(el);
+  updateCanvasOffset();
   return el;
 }
 
-  function makeInteractive(el) {
-    makeDraggable(el);
-    const resizer = document.createElement("div");
-    resizer.className = "resizer";
-    el.appendChild(resizer);
-    makeResizable(el, resizer);
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      showConfigPanel(el);
+function makeInteractive(el) {
+  makeDraggable(el);
+  const resizer = document.createElement("div");
+  resizer.className = "resizer";
+  el.appendChild(resizer);
+  makeResizable(el, resizer);
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showConfigPanel(el);
+  });
+}
+
+let configPanel = null;
+
+function showConfigPanel(el) {
+  if (configPanel) configPanel.remove();
+  configPanel = document.createElement("div");
+  configPanel.className = "config-panel";
+  configPanel.innerHTML = `
+    <label>Z-Index: <input type="number" id="zIndexInput" value="${el.style.zIndex || 0}" /></label>
+    <label>Border Radius: <input type="number" id="radiusInput" value="${parseInt(el.style.borderRadius) || 0}" /></label>
+    <label>Color: <input type="color" id="colorInput" value="${getItemColor(el)}" /></label>
+    ${el.classList.contains("text") ? '<label>Text: <input type="text" id="textInput" value="' + el.textContent + '" /></label>' : ''}
+    <button id="closeConfig">Close</button>
+  `;
+  document.body.appendChild(configPanel);
+  configPanel.style.left = (parseInt(el.style.left) + parseInt(el.style.width) + 40 + canvasOffsetX) + "px";
+  configPanel.style.top = (parseInt(el.style.top) + canvasOffsetY) + "px";
+
+  configPanel.querySelector("#zIndexInput").addEventListener("input", (e) => {
+    el.style.zIndex = e.target.value;
+    unsavedChanges = true;
+  });
+  configPanel.querySelector("#radiusInput").addEventListener("input", (e) => {
+    el.style.borderRadius = e.target.value + "px";
+    unsavedChanges = true;
+  });
+  configPanel.querySelector("#colorInput").addEventListener("input", (e) => {
+    if (el.classList.contains("text")) el.style.color = e.target.value;
+    else el.style.backgroundColor = e.target.value;
+    unsavedChanges = true;
+  });
+  if (el.classList.contains("text")) {
+    configPanel.querySelector("#textInput").addEventListener("input", (e) => {
+      el.textContent = e.target.value;
+      unsavedChanges = true;
     });
   }
+  configPanel.querySelector("#closeConfig").addEventListener("click", () => {
+    configPanel.remove();
+  });
+}
 
-  function showConfigPanel(el) {
-    if (configPanel) configPanel.remove();
-    configPanel = document.createElement("div");
-    configPanel.className = "config-panel";
-    configPanel.innerHTML = `
-      <label>Z-Index: <input type="number" id="zIndexInput" value="${el.style.zIndex || 0}" /></label>
-      <label>Border Radius: <input type="number" id="radiusInput" value="${parseInt(el.style.borderRadius) || 0}" /></label>
-      <label>Color: <input type="color" id="colorInput" value="${getItemColor(el)}" /></label>
-      ${el.classList.contains("text") ? '<label>Text: <input type="text" id="textInput" value="' + el.textContent + '" /></label>' : ''}
-      <button id="closeConfig">Close</button>
-    `;
-    document.body.appendChild(configPanel);
-    configPanel.style.left = (parseInt(el.style.left) + parseInt(el.style.width) + 20) + "px";
-    configPanel.style.top = el.style.top;
+function getItemColor(el) {
+  const rgb = el.classList.contains("text")
+    ? getComputedStyle(el).color
+    : getComputedStyle(el).backgroundColor;
+  const result = rgb.match(/\d+/g);
+  return result
+    ? "#" + result.slice(0, 3).map(x => {
+        const hex = parseInt(x).toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("")
+    : "#000000";
+}
 
-    configPanel.querySelector("#zIndexInput").addEventListener("input", (e) => {
-      el.style.zIndex = e.target.value;
+function makeDraggable(el) {
+  let startX, startY, origX, origY;
+  el.addEventListener("mousedown", (e) => {
+    if (e.target.classList.contains("resizer")) return;
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    origX = parseInt(el.style.left);
+    origY = parseInt(el.style.top);
+    function move(e) {
+      el.style.left = (origX + e.clientX - startX) + "px";
+      el.style.top = (origY + e.clientY - startY) + "px";
       unsavedChanges = true;
-    });
-    configPanel.querySelector("#radiusInput").addEventListener("input", (e) => {
-      el.style.borderRadius = e.target.value + "px";
-      unsavedChanges = true;
-    });
-    configPanel.querySelector("#colorInput").addEventListener("input", (e) => {
-      if (el.classList.contains("text")) el.style.color = e.target.value;
-      else el.style.backgroundColor = e.target.value;
-      unsavedChanges = true;
-    });
-    if (el.classList.contains("text")) {
-      configPanel.querySelector("#textInput").addEventListener("input", (e) => {
-        el.textContent = e.target.value;
-        unsavedChanges = true;
-      });
+      updateCanvasOffset();
     }
-    configPanel.querySelector("#closeConfig").addEventListener("click", () => {
-      configPanel.remove();
-    });
-  }
-
-  function getItemColor(el) {
-    if (el.classList.contains("text")) {
-      return rgbToHex(getComputedStyle(el).color);
-    } else {
-      return rgbToHex(getComputedStyle(el).backgroundColor);
+    function stop() {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", stop);
     }
-  }
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", stop);
+  });
+}
 
-  function rgbToHex(rgb) {
-    const result = rgb.match(/\d+/g);
-    return result ? "#" + result.slice(0, 3).map(x => {
-      const hex = parseInt(x).toString(16);
-      return hex.length === 1 ? "0" + hex : hex;
-    }).join("") : "#000000";
-  }
-
-  function makeDraggable(el) {
-    let startX, startY, origX, origY;
-    el.addEventListener("mousedown", (e) => {
-      if (e.target.classList.contains("resizer")) return;
-      e.preventDefault();
-      startX = e.clientX;
-      startY = e.clientY;
-      origX = parseInt(el.style.left);
-      origY = parseInt(el.style.top);
-      function move(e) {
-        el.style.left = (origX + e.clientX - startX) + "px";
-        el.style.top = (origY + e.clientY - startY) + "px";
-        unsavedChanges = true;
-      }
-      function stop() {
-        window.removeEventListener("mousemove", move);
-        window.removeEventListener("mouseup", stop);
-      }
-      window.addEventListener("mousemove", move);
-      window.addEventListener("mouseup", stop);
-    });
-  }
-
-  function makeResizable(el, resizer) {
-    let startX, startY, startWidth, startHeight;
-    resizer.addEventListener("mousedown", (e) => {
-      e.stopPropagation();
-      startX = e.clientX;
-      startY = e.clientY;
-      startWidth = parseInt(el.style.width);
-      startHeight = parseInt(el.style.height);
-      function resize(e) {
-        el.style.width = (startWidth + e.clientX - startX) + "px";
-        el.style.height = (startHeight + e.clientY - startY) + "px";
-        unsavedChanges = true;
-      }
-      function stop() {
-        window.removeEventListener("mousemove", resize);
-        window.removeEventListener("mouseup", stop);
-      }
-      window.addEventListener("mousemove", resize);
-      window.addEventListener("mouseup", stop);
-    });
-  }
+function makeResizable(el, resizer) {
+  let startX, startY, startWidth, startHeight;
+  resizer.addEventListener("mousedown", (e) => {
+    e.stopPropagation();
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = parseInt(el.style.width);
+    startHeight = parseInt(el.style.height);
+    function resize(e) {
+      el.style.width = (startWidth + e.clientX - startX) + "px";
+      el.style.height = (startHeight + e.clientY - startY) + "px";
+      unsavedChanges = true;
+    }
+    function stop() {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stop);
+    }
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stop);
+  });
+}
 
 window.addEventListener("DOMContentLoaded", async () => {
   if (!gameId) return alert("No game ID found in URL!");
-  
   const docSnap = await getDoc(doc(db, "games", gameId));
   if (docSnap.exists()) {
     const data = docSnap.data();
-    
     (data.items || []).forEach(item => {
       if (item.type === "text") {
-        createText(
-          item.x,
-          item.y,
-          item.content,
-          item.color,
-          item.zIndex,
-          item.borderRadius
-        );
+        createText(item.x, item.y, item.content, item.color, item.zIndex, item.borderRadius);
       } else {
-        createShape(
-          item.x,
-          item.y,
-          item.width,
-          item.height,
-          item.color,
-          item.circle,
-          item.zIndex,
-          item.borderRadius
-        );
+        createShape(item.x, item.y, item.width, item.height, item.color, item.circle, item.zIndex, item.borderRadius);
       }
     });
   }
 });
-
-
 </script>
 </body>
 </html>
