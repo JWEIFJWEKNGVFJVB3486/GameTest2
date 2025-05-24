@@ -147,7 +147,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, set, onDisconnect, onChildAdded, onChildChanged, onChildRemoved, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -301,6 +301,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.translate(-camX, -camY);
 
+  
   // Draw game items
   for (const item of items) {
     if (!item) continue;
@@ -356,19 +357,19 @@ function draw() {
     ctx.font = "20px Comic Sans MS";
     ctx.fillText(p.username || "?", p.x - 40, p.y - 70);
 
-    // Draw face
-    const faceImg = faceImages[uid];
-    if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
-      ctx.drawImage(faceImg, p.x - 30, p.y - 30, 60, 60);
-    }
+ // Draw face avatar image if loaded and valid
+  const faceImg = faceImages[uid];
+  if (faceImg && faceImg.complete && faceImg.naturalWidth !== 0) {
+    ctx.drawImage(faceImg, p.x - 30, p.y - 30, 60, 60);
+  }
 
-    // Draw hat
-    if (p.equippedHat && hatImages[p.equippedHat]) {
-      const img = hatImages[p.equippedHat];
-      if (img.complete && img.naturalWidth !== 0) {
-        ctx.drawImage(img, p.x - 36, p.y - 86, 80, 80);
-      }
+  // Draw equipped hat image if loaded and valid
+  if (p.equippedHat && hatImages[p.equippedHat]) {
+    const hatImg = hatImages[p.equippedHat];
+    if (hatImg.complete && hatImg.naturalWidth !== 0) {
+      ctx.drawImage(hatImg, p.x - 36, p.y - 86, 80, 80);
     }
+  }
 
     // Draw chat bubble
     if (p.chat) {
@@ -504,24 +505,22 @@ function toggleChatInput() {
     chatInput.style.display = "none";
   }
 }
-function sendChat() {
-  const msg = chatInput.value.trim();
-  if (!msg || !playerRef) return;
+function sendChat(message) {
+  player.chat = message;
 
-  player.chat = msg;
-  players[player.username] = player;  // Update local players cache
+  update(playerRef, {
+    chat: message
+  }).catch(console.error);
 
-  set(playerRef, player);
-
+  // Remove chat after 4 seconds
   setTimeout(() => {
-    if (player && player.chat === msg) {
-      delete player.chat;
-      players[player.username] = player;
-      set(playerRef, player);
+    if (player.chat === message) {
+      player.chat = null;
+      update(playerRef, {
+        chat: null
+      }).catch(console.error);
     }
   }, 4000);
-
-  chatInput.value = "";
 }
   onAuthStateChanged(auth, async (user) => {
   if (!user) return window.location.href = "index.html";
@@ -555,24 +554,31 @@ function sendChat() {
   await set(playerRef, player);
   onDisconnect(playerRef).remove();
 
-  const playersRef = ref(realtimeDb, `games/${gameId}/players`);
+const playersRef = ref(db, `players/${player.id}`);
 
-  onChildAdded(playersRef, snapshot => {
-    const id = snapshot.key;
-    const data = snapshot.val();
-    handlePlayerUpdate(id, data);
-  });
+// Listen for other players joining or updating
+onChildAdded(playersRef, snapshot => {
+  const id = snapshot.key;
+  const data = snapshot.val();
+  players[id] = data;
+  // e.g. refresh leaderboard, redraw player, etc.
+  console.log("Player added:", id, data);
+});
 
-  onChildChanged(playersRef, snapshot => {
-    const id = snapshot.key;
-    const data = snapshot.val();
-    handlePlayerUpdate(id, data);
-  });
+onChildChanged(playersRef, snapshot => {
+  const id = snapshot.key;
+  const data = snapshot.val();
+  players[id] = data;
+  // Update visuals accordingly
+  console.log("Player changed:", id, data);
+});
 
-  onChildRemoved(playersRef, snapshot => {
-    const id = snapshot.key;
-    delete players[id];
-  });
+onChildRemoved(playersRef, snapshot => {
+  const id = snapshot.key;
+  delete players[id];
+  // Remove from leaderboard, visuals, etc.
+  console.log("Player removed:", id);
+});cv
 
   loop();
 });
