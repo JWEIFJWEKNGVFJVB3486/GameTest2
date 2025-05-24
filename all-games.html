@@ -15,37 +15,53 @@
 
     .game-item {
       background: #fff;
-      padding: 10px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .play-btn {
-      background: #007bff;
-      color: white;
-      margin-top: 10px;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 3px 7px rgba(0,0,0,0.15);
       cursor: pointer;
     }
 
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
+    .play-btn, .like-btn, .dislike-btn {
+      background: #007bff;
+      color: white;
+      margin-top: 10px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
     }
 
-    .modal-content {
-      background: white;
+    .like-btn.active, .dislike-btn.active {
+      background-color: #28a745;
+    }
+
+    .dislike-btn.active {
+      background-color: #dc3545;
+    }
+
+    .game-panel {
+      background: #fff;
       padding: 20px;
-      border-radius: 6px;
-      width: 400px;
+      border-radius: 12px;
+      margin-top: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    .comment-box textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .comment {
+      background: #f4f4f4;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -53,33 +69,12 @@
 
 <h1>All Games</h1>
 <div id="gamesContainer"></div>
-
-<div id="gameModal" class="modal">
-  <div class="modal-content">
-    <h2 id="modalTitle">Game Title</h2>
-    <p id="modalDescription">Game Description</p>
-    <p><strong>Created by:</strong> <span id="modalCreator">Creator</span></p>
-    <p><strong>Visits:</strong> <span id="modalVisits">0</span></p>
-    <div>
-      <button id="likeBtn">👍 <span id="likeCount">0</span></button>
-      <button id="dislikeBtn">👎 <span id="dislikeCount">0</span></button>
-    </div>
-    <h3>Comments</h3>
-    <div id="commentsList"></div>
-    <input id="commentInput" placeholder="Add a comment..." style="width:100%; margin-top:10px;">
-    <button id="submitCommentBtn" class="play-btn">Post Comment</button>
-    <br><br>
-    <button id="modalPlayBtn" class="play-btn">Play Game</button>
-    <button onclick="document.getElementById('gameModal').style.display='none'" class="play-btn">Close</button>
-  </div>
-</div>
+<div id="gamePanel" class="game-panel" style="display: none;"></div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-    getFirestore, collection, getDocs, doc, getDoc, updateDoc, increment,
-    onSnapshot, addDoc, query, orderBy
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, increment, getDoc, onSnapshot, setDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCkjACpngpo9U96StM2Z1Y9Q7B3XtNSIQ0",
@@ -92,24 +87,11 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const firestore = getFirestore(app);
+  const db = getFirestore(app);
+  const auth = getAuth();
 
   const gamesContainer = document.getElementById("gamesContainer");
-  const modal = document.getElementById("gameModal");
-  const modalTitle = document.getElementById("modalTitle");
-  const modalDescription = document.getElementById("modalDescription");
-  const modalCreator = document.getElementById("modalCreator");
-  const modalVisits = document.getElementById("modalVisits");
-  const likeBtn = document.getElementById("likeBtn");
-  const dislikeBtn = document.getElementById("dislikeBtn");
-  const likeCount = document.getElementById("likeCount");
-  const dislikeCount = document.getElementById("dislikeCount");
-  const commentsList = document.getElementById("commentsList");
-  const commentInput = document.getElementById("commentInput");
-  const submitCommentBtn = document.getElementById("submitCommentBtn");
-  const modalPlayBtn = document.getElementById("modalPlayBtn");
-
-  let currentGameId = null;
+  const gamePanel = document.getElementById("gamePanel");
 
   function escapeHTML(str) {
     const div = document.createElement("div");
@@ -117,74 +99,122 @@
     return div.innerHTML;
   }
 
+  let currentUser = null;
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+  });
+
   async function loadAllGames() {
-    const snapshot = await getDocs(collection(firestore, "games"));
+    const snapshot = await getDocs(collection(db, "games"));
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
       const div = document.createElement("div");
       div.className = "game-item";
-      div.innerHTML = `
-        <strong>${escapeHTML(data.name || "Unnamed Game")}</strong><br>
+      div.innerHTML = `<strong>${escapeHTML(data.name || "Unnamed Game")}</strong><br>
         <small>${escapeHTML(data.description || "No description provided.")}</small><br>
-        <button class="play-btn">View</button>
-      `;
-      div.querySelector(".play-btn").addEventListener("click", () => openModal(docSnap.id));
+        <small>Visits: ${data.visits || 0}</small>`;
+
+      div.addEventListener("click", () => openGamePanel(docSnap.id));
       gamesContainer.appendChild(div);
     });
   }
 
-  async function openModal(gameId) {
-    currentGameId = gameId;
-    const gameRef = doc(firestore, "games", gameId);
-    await updateDoc(gameRef, { visits: increment(1) });
-    const docSnap = await getDoc(gameRef);
-    const data = docSnap.data();
+  async function openGamePanel(gameId) {
+    const docRef = doc(db, "games", gameId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return;
 
-    modalTitle.innerHTML = escapeHTML(data.name);
-    modalDescription.innerHTML = escapeHTML(data.description);
-    modalCreator.innerHTML = escapeHTML(data.creator);
-    modalVisits.textContent = data.visits || 0;
-    likeCount.textContent = data.likes || 0;
-    dislikeCount.textContent = data.dislikes || 0;
+    await updateDoc(docRef, { visits: increment(1) });
 
-    modalPlayBtn.onclick = () => {
-      window.location.href = `play.html?gameId=${gameId}`;
-    };
+    const game = docSnap.data();
+    gamePanel.style.display = "block";
+    gamePanel.innerHTML = `
+      <h2>${escapeHTML(game.name)}</h2>
+      <p>${escapeHTML(game.description)}</p>
+      <button class="play-btn" onclick="location.href='play.html?gameId=${gameId}'">Play Game</button>
+      <br><br>
+      <button class="like-btn" id="likeBtn">👍 Like (<span id="likeCount">${game.likes || 0}</span>)</button>
+      <button class="dislike-btn" id="dislikeBtn">👎 Dislike (<span id="dislikeCount">${game.dislikes || 0}</span>)</button>
+      <div class="comment-box">
+        <textarea id="commentText" placeholder="Add a comment..."></textarea>
+        <button onclick="addComment('${gameId}')" class="play-btn">Post Comment</button>
+      </div>
+      <div id="commentsSection"></div>
+    `;
 
-    likeBtn.onclick = async () => {
-      await updateDoc(gameRef, { likes: increment(1) });
-      likeCount.textContent = parseInt(likeCount.textContent) + 1;
-    };
+    const likeBtn = document.getElementById("likeBtn");
+    const dislikeBtn = document.getElementById("dislikeBtn");
 
-    dislikeBtn.onclick = async () => {
-      await updateDoc(gameRef, { dislikes: increment(1) });
-      dislikeCount.textContent = parseInt(dislikeCount.textContent) + 1;
-    };
+    const userDocRef = currentUser ? doc(db, `games/${gameId}/votes/${currentUser.uid}`) : null;
 
-    submitCommentBtn.onclick = async () => {
-      const text = commentInput.value.trim();
-      if (text === "") return;
-      await addDoc(collection(firestore, "games", gameId, "comments"), {
-        user: "Anonymous",
-        text,
-        timestamp: new Date()
-      });
-      commentInput.value = "";
-    };
+    if (userDocRef) {
+      const voteSnap = await getDoc(userDocRef);
+      const vote = voteSnap.exists() ? voteSnap.data().vote : null;
 
-    const commentsRef = collection(firestore, "games", gameId, "comments");
-    const q = query(commentsRef, orderBy("timestamp", "desc"));
-    onSnapshot(q, snapshot => {
-      commentsList.innerHTML = "";
+      if (vote === "like") likeBtn.classList.add("active");
+      if (vote === "dislike") dislikeBtn.classList.add("active");
+
+      likeBtn.onclick = async () => {
+        if (!currentUser) return alert("Log in to vote");
+        const newVote = likeBtn.classList.contains("active") ? null : "like";
+        await handleVote(gameId, newVote);
+        openGamePanel(gameId);
+      };
+
+      dislikeBtn.onclick = async () => {
+        if (!currentUser) return alert("Log in to vote");
+        const newVote = dislikeBtn.classList.contains("active") ? null : "dislike";
+        await handleVote(gameId, newVote);
+        openGamePanel(gameId);
+      };
+    }
+
+    const commentsRef = collection(db, `games/${gameId}/comments`);
+    onSnapshot(commentsRef, (snapshot) => {
+      const section = document.getElementById("commentsSection");
+      section.innerHTML = "";
       snapshot.forEach(doc => {
-        const comment = doc.data();
-        const p = document.createElement("p");
-        p.innerHTML = `<strong>${escapeHTML(comment.user)}:</strong> ${escapeHTML(comment.text)}`;
-        commentsList.appendChild(p);
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "comment";
+        div.innerHTML = `<strong>${escapeHTML(data.username || "Anonymous")}</strong><br>${escapeHTML(data.text)}`;
+        section.appendChild(div);
       });
     });
+  }
 
-    modal.style.display = "flex";
+  window.addComment = async function(gameId) {
+    const text = document.getElementById("commentText").value.trim();
+    if (!text || !currentUser) return;
+
+    const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+    const username = userSnap.exists() ? userSnap.data().username : "User";
+
+    await addDoc(collection(db, `games/${gameId}/comments`), {
+      text,
+      username,
+      createdAt: new Date()
+    });
+    document.getElementById("commentText").value = "";
+  };
+
+  async function handleVote(gameId, voteType) {
+    const voteRef = doc(db, `games/${gameId}/votes/${currentUser.uid}`);
+    const gameRef = doc(db, "games", gameId);
+    const prevVoteSnap = await getDoc(voteRef);
+    const prevVote = prevVoteSnap.exists() ? prevVoteSnap.data().vote : null;
+
+    const updates = {};
+    if (prevVote === voteType) {
+      updates[prevVote + "s"] = increment(-1);
+      await updateDoc(voteRef, { vote: null });
+    } else {
+      if (prevVote) updates[prevVote + "s"] = increment(-1);
+      if (voteType) updates[voteType + "s"] = increment(1);
+      await setDoc(voteRef, { vote: voteType });
+    }
+
+    await updateDoc(gameRef, updates);
   }
 
   loadAllGames();
