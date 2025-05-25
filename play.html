@@ -511,47 +511,54 @@ function toggleChatInput() {
   }
 }
 
-   onAuthStateChanged(auth, async (user) => {
-      if (!user) return window.location.href = "index.html";
-      await loadHats();
-      await loadBlocks();
-      const uid = user.uid;
-      const userData = await fetchUserData(uid);
-      const username = userData?.username || "Unnamed";
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return window.location.href = "index.html";
+  if (!gameId) {
+    alert("No gameId specified in URL");
+    return;
+  }
 
-      player = {
-        username,
-        x: Math.random() * (canvas.width - 100) + 50,
-        y: Math.random() * (canvas.height - 100) + 50,
-        color: userData?.avatarColor || "#" + Math.floor(Math.random() * 16777215).toString(16),
-        equippedHat: userData?.equippedHat || ""
-      };
+  await loadHats();
+  await loadBlocks();
 
-      playerRef = ref(realtimeDb, "players/" + uid);
-      set(playerRef, player);
-      onDisconnect(playerRef).remove();
+  const uid = user.uid;
+  const userData = await fetchUserData(uid);
+  const username = userData?.username || "Unnamed";
 
-      // Listeners to keep all players updated
-      const playersRef = ref(realtimeDb, "players");
-      onChildAdded(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
+  player = {
+    uid,
+    username,
+    x: Math.random() * (canvas.width - 100) + 50,
+    y: Math.random() * (canvas.height - 100) + 50,
+    color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+  };
 
-      onChildChanged(playersRef, snapshot => {
-        const id = snapshot.key;
-        const data = snapshot.val();
-        handlePlayerUpdate(id, data);
-      });
 
-      onChildRemoved(playersRef, snapshot => {
-        const id = snapshot.key;
-        delete players[id];
-      });
+      // Player reference inside this game's players node
+  playerRef = ref(realtimeDb, `games/${gameId}/players/${uid}`);
+  set(playerRef, player);
+  onDisconnect(playerRef).remove();
 
-      loop();
-    });
+  const playersRef = ref(realtimeDb, `games/${gameId}/players`);
+
+  onChildAdded(playersRef, snapshot => {
+    const id = snapshot.key;
+    const data = snapshot.val();
+    if (id !== uid) handlePlayerUpdate(id, data);
+  });
+  onChildChanged(playersRef, snapshot => {
+    const id = snapshot.key;
+    const data = snapshot.val();
+    if (id !== uid) handlePlayerUpdate(id, data);
+  });
+  onChildRemoved(playersRef, snapshot => {
+    const id = snapshot.key;
+    delete players[id];
+  });
+
+  players[uid] = player;
+
+  loop();
 
 
 
