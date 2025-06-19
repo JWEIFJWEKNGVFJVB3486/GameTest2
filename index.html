@@ -87,10 +87,10 @@
     <div class="login-box">
     <form onsubmit="signup(); return false;">
   <h2>Create Account</h2>
-  <input id="signup-username" placeholder="Username" required>
-  <input id="signup-email" placeholder="Email (kept private)" type="email" required>
-  <input id="signup-password" placeholder="Password" type="password" required>
-  <select id="gender">
+  <input id="signup-username" placeholder="Username" required autocomplete="username">
+  <input id="signup-email" placeholder="Email (kept private)" type="email" required autocomplete="email">
+  <input id="signup-password" placeholder="Password" type="password" required autocomplete="new-password">
+  <select id="gender" required>
     <option value="">Select Gender</option>
     <option value="Boy">Boy</option>
     <option value="Girl">Girl</option>
@@ -100,10 +100,11 @@
 
 <form onsubmit="login(); return false;">
   <h2>Log In</h2>
-  <input id="login-username" placeholder="Username" required>
-  <input id="login-password" placeholder="Password" type="password" required>
+  <input id="login-username" placeholder="Username" required autocomplete="username">
+  <input id="login-password" placeholder="Password" type="password" required autocomplete="current-password">
   <button type="submit">Log In</button>
 </form>
+
 
       <div class="message" id="message"></div>
     </div>
